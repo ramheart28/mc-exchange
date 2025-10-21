@@ -1,6 +1,5 @@
 import express from "express";
-import { createClient } from "@supabase/supabase-js";
-import dotenv from "dotenv";
+import { supabase } from "./config/supabaseClient";
 import crypto from "crypto";
 import cors from "cors";
 import helmet from "helmet";
@@ -18,15 +17,15 @@ function validatePayload(p) {
   const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
   // required fields
-  [ ['player', needStr], ['raw', needStr], ['dimension', needStr] ].forEach(([k, fn]) => {
+  [['player', needStr], ['raw', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
   // numeric coords 
-  ;['x','y','z'].forEach(k => { if (p[k] !== undefined) { const e = needInt(p[k], k); if (e) errors.push(e); } });
+  ;['x', 'y', 'z'].forEach(k => { if (p[k] !== undefined) { const e = needInt(p[k], k); if (e) errors.push(e); } });
 
   // quantities
-  ;['input_qty','output_qty'].forEach(k => {
+  ;['input_qty', 'output_qty'].forEach(k => {
     const v = p[k];
     if (!(Number.isInteger(v) && v >= 0)) errors.push(`${k} must be integer >= 0`);
   });
@@ -50,33 +49,14 @@ function makeBlockHash(player, raw) {
   return crypto.createHash('sha1').update(`${player}|${minute}|${raw}`).digest('hex');
 }
 
-dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(helmet());
 app.use(morgan("tiny"));
 
-console.log('ENV check:',
-  'URL?', !!process.env.SUPABASE_URL,
-  'SR KEY?', !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  'SR prefix:', (process.env.SUPABASE_SERVICE_ROLE_KEY || '').slice(0, 10)
-);
-
-const url = process.env.SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!url || !serviceKey) {
-  console.error('Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  process.exit(1);
-}
-
-const supabase = createClient(url, serviceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false
-  }
-})
+const rootRoutes = require("./routes/root.routes");
+app.use("/root", rootRoutes);
 
 // simple hash for deduplication
 function makeHash(raw) {
@@ -88,10 +68,10 @@ function makeHash(raw) {
 app.post('/api/exchanges', async (req, res) => {
   try {
     const b = req.body || {};
-    
+
     // DEBUG: Log the incoming request body
     console.log('Received exchange data:', JSON.stringify(b, null, 2));
-        // Convert dimension from minecraft namespace to simple name
+    // Convert dimension from minecraft namespace to simple name
     if (b.dimension === 'minecraft:overworld') {
       b.dimension = 'overworld';
     } else if (b.dimension === 'minecraft:the_nether') {
@@ -104,10 +84,10 @@ app.post('/api/exchanges', async (req, res) => {
     }
 
 
-    b.input_item_id  = normalizeItemId(b.input_item_id);
+    b.input_item_id = normalizeItemId(b.input_item_id);
     b.output_item_id = normalizeItemId(b.output_item_id);
 
-    b.compacted_input  = Boolean(b.compacted_input);
+    b.compacted_input = Boolean(b.compacted_input);
     b.compacted_output = Boolean(b.compacted_output);
 
     // validate
@@ -119,7 +99,7 @@ app.post('/api/exchanges', async (req, res) => {
 
     // build dedupe hash from the full block
     const hash_id = makeBlockHash(b.player, String(b.raw).replace(/\r\n/g, '\n'));
-    
+
     console.log('Generated hash_id:', hash_id);
 
     // write (UPSERT on hash_id)
@@ -128,7 +108,7 @@ app.post('/api/exchanges', async (req, res) => {
       player: b.player,
       x: b.x, y: b.y, z: b.z,
       dimension: b.dimension,
-      loc_src:'manual',
+      loc_src: 'manual',
       input_item_id: b.input_item_id,
       input_qty: b.input_qty,
       output_item_id: b.output_item_id,
@@ -139,9 +119,9 @@ app.post('/api/exchanges', async (req, res) => {
       raw: b.raw,
       hash_id
     };
-    
+
     console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
-    
+
     const { error } = await supabase
       .from('shop_events')
       .upsert(insertData, { onConflict: 'hash_id' })
