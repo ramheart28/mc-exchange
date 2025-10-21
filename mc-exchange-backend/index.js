@@ -56,7 +56,9 @@ app.use(helmet());
 app.use(morgan("tiny"));
 
 import { rootRouter } from "./routes/root.routes.js";
+import { adminRouter } from "./routes/admin.routes.js";
 app.use("/root", rootRouter);
+app.use("/admin", adminRouter);
 
 // simple hash for deduplication
 function makeHash(raw) {
