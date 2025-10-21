@@ -1,9 +1,9 @@
 import express from "express";
 import { supabase } from "../config/supabaseClient.js";
 
-const router = express.Router();
+const rootRouter = express.Router();
 
-router.get("/all", async (req, res) => {
+rootRouter.get("/all", async (req, res) => {
   const { data, error } = await supabase
     .from("shop_events")
     .select("*")
@@ -18,4 +18,4 @@ router.get("/all", async (req, res) => {
   res.send(json);
 });
 
-module.exports = router;
+export { rootRouter };

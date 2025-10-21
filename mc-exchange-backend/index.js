@@ -55,8 +55,8 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("tiny"));
 
-const rootRoutes = require("./routes/root.routes");
-app.use("/root", rootRoutes);
+import { rootRouter } from "./routes/root.routes.js";
+app.use("/root", rootRouter);
 
 // simple hash for deduplication
 function makeHash(raw) {
