@@ -1,0 +1,143 @@
+package com.mcexchange.chatrelay;
+
+import net.minecraft.util.math.BlockPos;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.security.MessageDigest;
+import java.nio.charset.StandardCharsets;
+
+public class ExchangeParser {
+    private static final Pattern EXCHANGE_COUNT_PATTERN = Pattern.compile("\\((\\d+)/(\\d+)\\) exchanges present");
+    private static final Pattern EXCHANGE_AVAILABLE_PATTERN = Pattern.compile("(\\d+) exchanges available");
+    
+    public static void parseAndSend(String player, String rawMessage, String dimension, BlockPos pos) {
+        try {
+            List<ExchangeData> exchanges = parseExchanges(player, rawMessage, dimension, pos);
+            
+            for (ExchangeData exchange : exchanges) {
+                ChatRelayService.sendExchangeData(exchange);
+            }
+        } catch (Exception e) {
+            ChatRelayMod.LOGGER.error("Error parsing exchange message: {}", rawMessage, e);
+        }
+    }
+    
+    private static List<ExchangeData> parseExchanges(String player, String rawMessage, String dimension, BlockPos pos) {
+        List<ExchangeData> exchanges = new ArrayList<>();
+        String[] lines = rawMessage.split("\n");
+        
+        int exchangesAvailable = 0;
+        String currentInput = null;
+        int currentInputQty = 0;
+        
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i].trim();
+            
+            // Parse exchange availability count  
+            Matcher availableMatcher = EXCHANGE_AVAILABLE_PATTERN.matcher(line);
+            if (availableMatcher.find()) {
+                exchangesAvailable = Integer.parseInt(availableMatcher.group(1));
+                continue;
+            }
+            
+            // Parse input line: "Input: 1 Diamond"
+            if (line.startsWith("Input:")) {
+                Pattern inputPattern = Pattern.compile("Input: (\\d+) (.+)");
+                Matcher inputMatcher = inputPattern.matcher(line);
+                if (inputMatcher.find()) {
+                    currentInputQty = Integer.parseInt(inputMatcher.group(1));
+                    currentInput = inputMatcher.group(2).trim();
+                }
+                continue;
+            }
+            
+            // Parse output line: "Output: 2 Sand" 
+            if (line.startsWith("Output:") && currentInput != null) {
+                Pattern outputPattern = Pattern.compile("Output: (\\d+) (.+)");
+                Matcher outputMatcher = outputPattern.matcher(line);
+                if (outputMatcher.find()) {
+                    int outputQty = Integer.parseInt(outputMatcher.group(1));
+                    String outputItem = outputMatcher.group(2).trim();
+                    
+                    // Create exchange data
+                    ExchangeData exchange = new ExchangeData();
+                    exchange.player = player;
+                    exchange.dimension = dimension;
+                    exchange.x = pos.getX();
+                    exchange.y = pos.getY();
+                    exchange.z = pos.getZ();
+                    exchange.loc_src = "chat_relay";
+                    exchange.input_item_id = currentInput;
+                    exchange.input_qty = currentInputQty;
+                    exchange.output_item_id = outputItem;
+                    exchange.output_qty = outputQty;
+                    exchange.exchange_possible = exchangesAvailable;
+                    exchange.raw = rawMessage;
+                    exchange.hash_id = generateHashId(exchange);
+                    exchange.compacted_input = isCompactedItem(currentInput);
+                    exchange.compacted_output = isCompactedItem(outputItem);
+                    
+                    exchanges.add(exchange);
+                    ChatRelayMod.LOGGER.info("Parsed exchange: {} {} -> {} {}", 
+                        currentInputQty, currentInput, outputQty, outputItem);
+                    
+                    // Reset for next exchange
+                    currentInput = null;
+                    currentInputQty = 0;
+                }
+            }
+        }
+        
+        return exchanges;
+    }
+    
+    private static String generateHashId(ExchangeData exchange) {
+        try {
+            String data = String.format("%s_%d_%d_%d_%s_%d_%s_%d", 
+                exchange.player, exchange.x, exchange.y, exchange.z,
+                exchange.input_item_id, exchange.input_qty,
+                exchange.output_item_id, exchange.output_qty);
+            
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data.getBytes(StandardCharsets.UTF_8));
+            
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString().substring(0, 16); // First 16 chars
+        } catch (Exception e) {
+            String fallbackData = String.format("%s_%d_%d_%d_%s_%d_%s_%d", 
+                exchange.player, exchange.x, exchange.y, exchange.z,
+                exchange.input_item_id, exchange.input_qty,
+                exchange.output_item_id, exchange.output_qty);
+            return String.valueOf(fallbackData.hashCode());
+        }
+    }
+    
+    private static boolean isCompactedItem(String itemName) {
+        return itemName.toLowerCase().contains("block") || 
+               itemName.toLowerCase().contains("compressed") ||
+               itemName.toLowerCase().contains("compact");
+    }
+    
+    public static class ExchangeData {
+        public String player;
+        public String dimension;
+        public int x, y, z;
+        public String loc_src;
+        public String input_item_id;
+        public int input_qty;
+        public String output_item_id;
+        public int output_qty;
+        public int exchange_possible;
+        public String raw;
+        public String hash_id;
+        public boolean compacted_input;
+        public boolean compacted_output;
+    }
+}
