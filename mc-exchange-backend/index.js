@@ -1,5 +1,5 @@
 import express from "express";
-import { supabase } from "./config/supabaseClient";
+import { supabase } from "./config/supabaseClient.js";
 import crypto from "crypto";
 import cors from "cors";
 import helmet from "helmet";
