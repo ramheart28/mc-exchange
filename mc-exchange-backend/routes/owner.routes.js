@@ -1,5 +1,6 @@
 import express from "express";
 import { supabase } from "../config/supabaseClient.js"
+import { protectRoute } from "../middleware/authMiddleWare.js";
 
 const router = express.Router();
 router.use(express.json())
@@ -33,8 +34,15 @@ function validatePayload(p) {
         return errors;
 }
 
-router.post("/createShop", async (req, res) => {
+router.post("/regions/:id/shops", protectRoute, async (req, res) => {
         try {
+                if (!req.user) {
+                        console.log('No auth provided');
+                        return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+                }
+
+                const region_id = req.params.id;
+
                 let b = req.body || {};
 
                 const errs = validatePayload(b);
@@ -43,37 +51,85 @@ router.post("/createShop", async (req, res) => {
                         return res.status(400).json({ error: 'bad_request', details: errs });
                 }
 
-                let bounds = new Array();
+                let center = { x: 0, y: 0, z: 0 };
                 for (let i = 0; i < b.bounds.length; i++) {
-                        bounds[i] = {
-                                min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
-                                max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
-                        }
+                        center.x += (b.bounds[i].min_x + b.bounds[i].max_x) * 0.5;
+                        center.y += (b.bounds[i].min_y + b.bounds[i].max_y) * 0.5;
+                        center.z += (b.bounds[i].min_z + b.bounds[i].max_z) * 0.5;
                 }
+
+                center.x = Math.round(center.x * 1 / b.bounds.length);
+                center.y = Math.round(center.y * 1 / b.bounds.length);
+                center.z = Math.round(center.z * 1 / b.bounds.length);
+
+                console.log(center);
+                const { data: region_data, error: region_find_error } = await supabase.rpc('find_region_in_bounds', {
+                        px: center.x,
+                        py: center.y,
+                        pz: center.z
+                }).single();
+
+                if (region_find_error) {
+                        console.error('Unable to find region:', region_find_error);
+                        return res.status(400).json({ error: 'bad_request', details: region_find_error });
+                }
+
+                if (region_id !== region_data.id) {
+                        var err = `Region id mismatch, zone: ${region_data.id}, requested $(region_id)`;
+                        console.error("Region match error: ", err)
+                        return res.status(400).json({ error: 'bad_request', details: err });
+                }
+
+                if (region_data.owners.contains(req.user.id)) {
+                        var err = `User is not in region owners`;
+                        console.error("Region auth error: ", err)
+                        return res.status(400).json({ error: 'bad_request', details: err });
+                }
+
+
+                const formatted_bounds = b.bounds.map(
+                        (bound) => `(${bound.min_x},${bound.min_y},${bound.min_z},${bound.max_x},${bound.max_y},${bound.max_z})`
+                );
 
                 const insertData = {
                         name: b.name,
                         author: b.author,
                         owner: b.owner,
                         dimension: b.dimension,
-                        bounds: JSON.stringify(bounds)
+                        bounds: formatted_bounds,
+                        region: region_data['id']
                 }
 
                 console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
 
-                const { error } = await supabase
+                const { data: shop_data, error } = await supabase
                         .from('shops')
-                        .upsert(insertData, { onConflict: 'name' })
-                        .select();
+                        .insert(insertData)
+                        .select().single();
 
                 if (error) {
                         console.log('Database error:', error);
                         return res.status(500).json({ error: 'db_error', details: error.message });
                 }
 
+                console.log(shop_data);
+                let current_region_shops = region_data['shops'] || [];
+
+                current_region_shops = [...current_region_shops, shop_data.id];
+
+                const { error: update_region_error } = await supabase
+                        .from('regions')
+                        .update({ ['shops']: current_region_shops })
+                        .eq('id', region_data['id']);
+
+                if (region_find_error) {
+                        console.error('Unable to update region:', update_region_error);
+                        return res.status(400).json({ error: 'bad_request', details: update_region_error });
+                }
+
                 console.log('Successfully inserted exchange data with name:', b.name);
 
-                return res.status(201).json({ ok: true, hash_id });
+                return res.status(201).json({ ok: true, id: shop_data.id });
 
         } catch (e) {
                 console.error('ingest error', e);
@@ -81,8 +137,135 @@ router.post("/createShop", async (req, res) => {
         }
 });
 
-router.get("/shops", (req, res) => {
+router.get("/regions/:id/shops", protectRoute, async (req, res) => {
+        try {
+                if (!req.user) {
+                        console.log('No auth provided');
+                        return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+                }
 
+                const region_id = req.params.id;
+                let b = req.body || {};
+                const { data: region_data, error: region_error } = await supabase
+                        .from("regions")
+                        .select("shops")
+                        .eq('id', region_id)
+                        .contains('owners', [req.user.id])
+                        .single();
+
+                if (region_error) {
+                        console.error('Unable to find region:', region_error);
+                        return res.status(400).json({ error: 'bad_request', details: region_error });
+                }
+
+                const { data: shops_data, error: shop_error } = await supabase
+                        .from("shops")
+                        .select("*")
+                        .in('id', region_data.shops);
+
+                if (shop_error) {
+                        console.error('Unable to find shop:', shop_error);
+                        return res.status(400).json({ error: 'bad_request', details: shop_error });
+                }
+
+                const json = JSON.stringify(shops_data, null, 2)
+
+                res.setHeader("Content-Type", "text/json");
+                res.setHeader("Content-Disposition", "attachment; filename=shops.json");
+                res.send(json);
+        } catch (e) {
+                console.error('ingest error', e);
+                return res.status(500).json({ error: 'server_error' });
+        }
+});
+
+function validateUpdatePayload(p) {
+        const errors = [];
+        const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+        const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+
+        const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+        const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+
+        // required feilds
+        [['shop_id', needStr], ['name', optStr], ['owner', optStr]].forEach(([k, fn]) => {
+                const e = fn(p[k], k); if (e) errors.push(e);
+        });
+
+        return errors;
+}
+router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
+        try {
+                if (!req.user) {
+                        console.log('No auth provided');
+                        return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+                }
+
+                const region_id = req.params.id;
+                let b = req.body || {};
+
+                validateUpdatePayload(b);
+
+                const { data: region_data, error: region_error } = await supabase
+                        .from("regions")
+                        .select("shops")
+                        .eq('id', region_id)
+                        .contains('owners', [req.user.id])
+                        .single();
+
+                if (region_error) {
+                        console.error('Unable to find region:', region_error);
+                        return res.status(400).json({ error: 'bad_request', details: region_error });
+                }
+
+                if (!region_data.shops.includes(b.shop_id)) {
+                        var err = `Unable to find shop: ${b.shop_id}`;
+                        console.error(err);
+                        return res.status(400).json({ error: 'bad_request', details: err });
+                }
+
+                let updateData = {};
+                if (b.name)
+                        updateData.name = b.name;
+                if (b.owner)
+                        updateData.owner = b.owner;
+
+                const { error: shop_error } = await supabase
+                        .from("shops")
+                        .update(updateData)
+                        .eq('id', b.shop_id);
+
+                if (shop_error) {
+                        console.error('Shop update error:', shop_error);
+                        return res.status(400).json({ error: 'bad_request', details: shop_error });
+                }
+
+                return res.status(201).json({ ok: true, id: b.shop_id });
+        } catch (e) {
+                console.error('ingest error', e);
+                return res.status(500).json({ error: 'server_error' });
+        }
+});
+
+router.get("/regions", protectRoute, async (req, res) => {
+        if (!req.user) {
+                console.log('No auth provided');
+                return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+        }
+
+        const { data, error } = await supabase
+                .from("regions")
+                .select("*")
+                .contains('owners', [req.user.id])
+                .order("name", { ascending: false });
+
+        if (error) return res.status(500).send(error.message);
+
+        const json = JSON.stringify(data, null, 2)
+
+        res.setHeader("Content-Type", "text/json");
+        res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
+        res.send(json);
 });
 
 export { router };

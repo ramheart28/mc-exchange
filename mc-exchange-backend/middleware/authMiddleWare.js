@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabaseClient.js');
+import { supabase } from '../config/supabaseClient.js';
 
 export const protectRoute = async (req, res, next) => {
         const token = req.headers.authorization?.split(' ')[1]; // Assuming Bearer token

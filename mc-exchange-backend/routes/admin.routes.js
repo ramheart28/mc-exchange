@@ -50,8 +50,6 @@ function validateRegionCreatePayload(p) {
   }
 
 
-  p.bounds = JSON.parse(p['bounds']);
-
   if (Array.isArray(p['bounds'])) {
     let bounds = p['bounds'];
 
@@ -82,20 +80,16 @@ router.post("/regions", async (req, res) => {
     return res.status(400).json({ error: 'bad_request', details: errs });
   }
 
-  let bounds = new Array();
-  for (let i = 0; i < b.bounds.length; i++) {
-    bounds[i] = {
-      min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
-      max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
-    }
-  }
+  const formatted_bounds = b.bounds.map(
+    (bound) => `(${bound.min_x},${bound.min_y},${bound.min_z},${bound.max_x},${bound.max_y},${bound.max_z})`
+  );
 
   const insertData = {
     name: b.name,
     slug: b.slug,
     dimension: b.dimension,
     owner: b.owner,
-    bounds: JSON.stringify(bounds)
+    bounds: formatted_bounds
   }
 
   console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
@@ -175,15 +169,10 @@ router.patch("/regions/:id", async (req, res) => {
     insertData['owner'] = b.owner;
 
   if (b.bounds) {
-    let bounds = new Array();
-    for (let i = 0; i < b.bounds.length; i++) {
-      bounds[i] = {
-        min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
-        max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
-      }
-    }
-
-    insertData['bounds'] = JSON.stringify(bounds);
+    const formatted_bounds = b.bounds.map(
+      (bound) => `(${bound.min_x},${bound.min_y},${bound.min_z},${bound.max_x},${bound.max_y},${bound.max_z})`
+    );
+    insertData['bounds'] = formatted_bounds;
   }
 
   const { error } = await supabase.from('regions').update(insertData).eq('id', id);

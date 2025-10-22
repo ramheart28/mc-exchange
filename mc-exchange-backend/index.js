@@ -57,8 +57,6 @@ app.use(morgan("tiny"));
 
 import { router as owner_router } from "./routes/owner.routes.js";
 import { router as admin_router } from "./routes/admin.routes.js";
-import { router as auth_router } from "./routes/auth.routes.js";
-app.use("/auth", auth_router);
 app.use("/owner", owner_router);
 app.use("/admin", admin_router);
 
@@ -101,6 +99,17 @@ app.post('/api/exchanges', async (req, res) => {
                         return res.status(400).json({ error: 'bad_request', details: errs });
                 }
 
+                const { data: shop_data, error: shop_find_error } = await supabase.rpc('find_shop_in_bounds', {
+                        px: b.x,
+                        py: b.y,
+                        pz: b.z
+                }).single();
+
+                let shop_id = null;
+                if (!find_shop_error) {
+                        shop_id = shop_data.id;
+                }
+
                 // build dedupe hash from the full block
                 const hash_id = makeBlockHash(b.player, String(b.raw).replace(/\r\n/g, '\n'));
 
@@ -121,6 +130,7 @@ app.post('/api/exchanges', async (req, res) => {
                         compacted_input: b.compacted_input,
                         compacted_output: b.compacted_output,
                         raw: b.raw,
+                        shop: shop_id,
                         hash_id
                 };
 
