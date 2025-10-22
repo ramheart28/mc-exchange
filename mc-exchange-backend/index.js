@@ -57,6 +57,8 @@ app.use(morgan("tiny"));
 
 import { router as owner_router } from "./routes/owner.routes.js";
 import { router as admin_router } from "./routes/admin.routes.js";
+import { router as auth_router } from "./routes/auth.routes.js";
+app.use("/auth", auth_router);
 app.use("/owner", owner_router);
 app.use("/admin", admin_router);
 

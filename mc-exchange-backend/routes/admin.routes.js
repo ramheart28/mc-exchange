@@ -117,11 +117,11 @@ router.post("/regions", async (req, res) => {
 
 function validatePatchRegionPayload(p) {
   const errors = [];
-  const needStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
-  const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+  const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+  const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required feilds
-  [['name', needStr], ['slug', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+  [['name', optStr], ['slug', optStr], ['owner', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
@@ -138,7 +138,7 @@ function validatePatchRegionPayload(p) {
       ;['min_x', 'min_y', 'min_z',
         'max_x', 'max_y', 'max_z'].forEach(k => {
           if (bounds[i][k] !== undefined) {
-            const e = needInt(bounds[i][k], k); if (e) errors.push(e);
+            const e = optInt(bounds[i][k], k); if (e) errors.push(e);
           }
         });
     }
@@ -245,6 +245,65 @@ router.get("/stats", async (_, res) => {
   res.setHeader("Content-Disposition", "attachment; filename=stats.json");
   res.send(json);
 })
+
+router.get("/users", async (req, res) => {
+  let b = req.body || {};
+
+  let page = 1;
+  if (b['page'] && Number.isInteger(b['page']))
+    page = b['page'];
+
+  let per_page = 1;
+  if (b['per_page'] && Number.isInteger(b['per_page']))
+    per_page = b['per_page'];
+
+
+  const { data: { users }, auth_error } = await supabase.auth.admin.listUsers({
+    page,
+    perPage: per_page,
+  });
+
+  if (auth_error) {
+    console.error('error getting auth users:', auth_error.message);
+    return res.status(500).send(auth_error.message);
+  }
+
+  console.log('All users:', users);
+
+  res.setHeader("Content-Type", "text/json");
+  res.setHeader("Content-Disposition", "attachment; filename=users.json");
+  res.send(users);
+});
+
+function validatePatchUserPayload(p) {
+  const errors = [];
+  const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+  const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+
+  // required feilds
+  [['name', optStr], ['role', optStr], ['regions', optStr]].forEach(([k, fn]) => {
+    const e = fn(p[k], k); if (e) errors.push(e);
+  });
+}
+
+router.patch("/users/:id", async (req, res) => {
+  var b = req.body || {};
+
+  var errs = validatePatchUserPayload(p);
+  if (errs.length) {
+    console.log('Validation errors:', errs);
+    return res.status(400).json({ error: 'bad_request', details: errs });
+  }
+
+  if (b.name)
+    insertData['name'] = b.name;
+
+  if (b.slug)
+    insertData['role'] = b.role;
+
+  if (b.dimension)
+    insertData['regions'] = b.regions;
+});
 
 
 export { router };

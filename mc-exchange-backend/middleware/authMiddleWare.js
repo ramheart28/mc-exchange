@@ -7,7 +7,7 @@ export const protectRoute = async (req, res, next) => {
                 return res.status(401).json({ message: 'No authorization token provided' });
         }
 
-        const { data: { user }, error } = await supabase.auth.getUser(token);
+        const { data: { user }, signupError: error } = await supabase.auth.getUser(token);
 
         if (error || !user) {
                 return res.status(401).json({ message: 'Invalid or expired token' });
