@@ -18,16 +18,41 @@ router.get("/all", async (req, res) => {
   res.send(json);
 });
 
+router.get("/regions", async (req, res) => {
+  const { data, error } = await supabase
+    .from("regions")
+    .select("*")
+    .order("name", { ascending: false });
+
+  if (error) return res.status(500).send(error.message);
+
+  const json = JSON.stringify(data, null, 2)
+
+  res.setHeader("Content-Type", "text/json");
+  res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
+  res.send(json);
+});
+
 function validateRegionCreatePayload(p) {
   const errors = [];
   const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+  const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required feilds
   [['name', needStr], ['slug', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
-  if (p['bounds'] && Array.isArray(p['bounds'])) {
+  if (!p['bounds']) {
+    errors.push("bounds required");
+
+    return errors;
+  }
+
+
+  p.bounds = JSON.parse(p['bounds']);
+
+  if (Array.isArray(p['bounds'])) {
     let bounds = p['bounds'];
 
     for (let i = 0; i < bounds.length; i++) {
@@ -46,6 +71,7 @@ function validateRegionCreatePayload(p) {
 
   return errors;
 }
+
 
 router.post("/regions", async (req, res) => {
   var b = req.body || {};
@@ -67,15 +93,122 @@ router.post("/regions", async (req, res) => {
   const insertData = {
     name: b.name,
     slug: b.slug,
-    author: b.author,
     dimension: b.dimension,
     owner: b.owner,
     bounds: JSON.stringify(bounds)
   }
 
   console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
+
+  const { error } = await supabase
+    .from('regions')
+    .insert(insertData)
+    .select();
+
+  if (error) {
+    console.log('Database error:', error);
+    return res.status(500).json({ error: 'db_error', details: error.message });
+  }
+
+  console.log('Successfully inserted region data data');
+
+  return res.status(201).json({ ok: true });
+});
+
+function validatePatchRegionPayload(p) {
+  const errors = [];
+  const needStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+  const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+
+  // required feilds
+  [['name', needStr], ['slug', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+    const e = fn(p[k], k); if (e) errors.push(e);
+  });
+
+  if (!p['bounds'])
+    return errors;
+
+  p.bounds = JSON.parse(p['bounds']);
+
+  if (Array.isArray(p['bounds'])) {
+    let bounds = p['bounds'];
+
+    for (let i = 0; i < bounds.length; i++) {
+      // numeric coords 
+      ;['min_x', 'min_y', 'min_z',
+        'max_x', 'max_y', 'max_z'].forEach(k => {
+          if (bounds[i][k] !== undefined) {
+            const e = needInt(bounds[i][k], k); if (e) errors.push(e);
+          }
+        });
+    }
+  }
+  else {
+    errors.push("bounds must be array");
+  }
+
+  return errors;
+}
+
+router.patch("/regions/:id", async (req, res) => {
+  const id = req.params.id;
+  const b = req.body || {};
+
+  var errs = validatePatchRegionPayload(b);
+  if (errs.length) {
+    console.log('Validation errors:', errs);
+    return res.status(400).json({ error: 'bad_request', details: errs });
+  }
+
+  let insertData = {};
+
+  if (b.name)
+    insertData['name'] = b.name;
+
+  if (b.slug)
+    insertData['slug'] = b.slug;
+
+  if (b.dimension)
+    insertData['dimension'] = b.dimension;
+
+  if (b.owner)
+    insertData['owner'] = b.owner;
+
+  if (b.bounds) {
+    let bounds = new Array();
+    for (let i = 0; i < b.bounds.length; i++) {
+      bounds[i] = {
+        min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
+        max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
+      }
+    }
+
+    insertData['bounds'] = JSON.stringify(bounds);
+  }
+
+  const { error } = await supabase.from('regions').update(insertData).eq('id', id);
+
+  if (error) {
+    console.log('Database error:', error);
+    return res.status(500).json({ error: 'db_error', details: error.message });
+  }
+
+  console.log('Successfully updated region data id:', id);
+
+  return res.status(201).json({ ok: true, id });
 })
 
+router.delete("/regions/:id", async (req, res) => {
+  const id = req.params.id;
+  const { error } = await supabase.from('regions').delete().eq('id', id);
+
+  if (error) {
+    console.log('Database error:', error);
+    return res.status(500).json({ error: 'db_error', details: error.message });
+  }
+
+  return res.status(201).json({ ok: true, id });
+});
 
 async function getHalfDayCount() {
   var date = new Date();
