@@ -55,10 +55,10 @@ app.use(cors());
 app.use(helmet());
 app.use(morgan("tiny"));
 
-import { rootRouter } from "./routes/root.routes.js";
-import { adminRouter } from "./routes/admin.routes.js";
-app.use("/root", rootRouter);
-app.use("/admin", adminRouter);
+import { router as owner_router } from "./routes/owner.routes.js";
+import { router as admin_router } from "./routes/admin.routes.js";
+app.use("/owner", owner_router);
+app.use("/admin", admin_router);
 
 // simple hash for deduplication
 function makeHash(raw) {

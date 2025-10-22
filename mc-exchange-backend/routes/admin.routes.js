@@ -1,16 +1,29 @@
 import express from "express";
-import { supabase } from "../config/supabaseClient.js"
+import { supabase } from "../config/supabaseClient.js";
 
-const adminRouter = express.Router();
-adminRouter.use(express.json())
+const router = express.Router();
 
-function validatePayload(p) {
+router.get("/all", async (req, res) => {
+  const { data, error } = await supabase
+    .from("shop_events")
+    .select("*")
+    .order("ts", { ascending: false });
+
+  if (error) return res.status(500).send(error.message);
+
+  const json = JSON.stringify(data, null, 2)
+
+  res.setHeader("Content-Type", "text/json");
+  res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
+  res.send(json);
+});
+
+function validateRegionCreatePayload(p) {
   const errors = [];
-  const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
   const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
   // required feilds
-  [['name', needStr], ['author', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+  [['name', needStr], ['slug', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
@@ -30,60 +43,75 @@ function validatePayload(p) {
   else {
     errors.push("bounds must be array");
   }
+
   return errors;
 }
 
-adminRouter.post("/createShop", async (req, res) => {
-  try {
-    let b = req.body || {};
+router.post("/regions", async (req, res) => {
+  var b = req.body || {};
 
-    const errs = validatePayload(b);
-    if (errs.length) {
-      console.log('Validation errors:', errs);
-      return res.status(400).json({ error: 'bad_request', details: errs });
-    }
-
-    let bounds = new Array();
-    for (let i = 0; i < b.bounds.length; i++) {
-      bounds[i] = {
-        min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
-        max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
-      }
-    }
-
-    const insertData = {
-      name: b.name,
-      author: b.author,
-      owner: b.owner,
-      dimension: b.dimension,
-      bounds: JSON.stringify(bounds)
-    }
-
-
-    console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
-
-    const { error } = await supabase
-      .from('shops')
-      .upsert(insertData, { onConflict: 'name' })
-      .select();
-
-    if (error) {
-      console.log('Database error:', error);
-      return res.status(500).json({ error: 'db_error', details: error.message });
-    }
-
-    console.log('Successfully inserted exchange data with name:', b.name);
-
-    return res.status(201).json({ ok: true, hash_id });
-
-  } catch (e) {
-    console.error('ingest error', e);
-    return res.status(500).json({ error: 'server_error' });
+  let errs = validateRegionCreatePayload(b);
+  if (errs.length) {
+    console.log('Validation errors:', errs);
+    return res.status(400).json({ error: 'bad_request', details: errs });
   }
-});
 
-adminRouter.get("/shops", (req, res) => {
+  let bounds = new Array();
+  for (let i = 0; i < b.bounds.length; i++) {
+    bounds[i] = {
+      min_x: b.bounds[i].min_x, min_y: b.bounds[i].min_y, min_z: b.bounds[i].min_z,
+      max_x: b.bounds[i].max_x, max_y: b.bounds[i].max_y, max_z: b.bounds[i].max_z
+    }
+  }
 
-});
+  const insertData = {
+    name: b.name,
+    slug: b.slug,
+    author: b.author,
+    dimension: b.dimension,
+    owner: b.owner,
+    bounds: JSON.stringify(bounds)
+  }
 
-export { adminRouter };
+  console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
+})
+
+
+async function getHalfDayCount() {
+  var date = new Date();
+  date.setHours(date.getHours() - 12);
+  var half_day_ts = date.toISOString();
+  const { data, error } = await supabase
+    .from("shop_events")
+    .select(
+      "ts"
+    )
+    .gte("ts", half_day_ts);
+
+  if (error) return res.status(500).send(error.message);
+  return data.length;
+}
+
+async function getTotal() {
+  const { data, error } = await supabase
+    .from("shop_events")
+    .select(
+      "*"
+    );
+
+  if (error) return res.status(500).send(error.message);
+  return data.length;
+}
+
+router.get("/stats", async (_, res) => {
+  let data = { total: await getTotal(), halfday: await getHalfDayCount() };
+
+  const json = JSON.stringify(data, null, 2)
+
+  res.setHeader("Content-Type", "text/json");
+  res.setHeader("Content-Disposition", "attachment; filename=stats.json");
+  res.send(json);
+})
+
+
+export { router };
