@@ -141,7 +141,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                         console.log('No auth provided');
                         return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
                 }
-                       
+
                 const region_id = req.params.id;
                 let b = req.body || {};
                 const { data: region_data, error: region_error } = await supabase
@@ -167,6 +167,66 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                 }
 
                 return res.status(201).json({ ok: true, shops: shops_data });
+        } catch (e) {
+                console.error('ingest error', e);
+                return res.status(500).json({ error: 'server_error' });
+        }
+});
+
+function validateDeletePayload(p) {
+        const errors = [];
+        const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+
+        // required feilds
+        [['shop_id', needStr]].forEach(([k, fn]) => {
+                const e = fn(p[k], k); if (e) errors.push(e);
+        });
+
+        return errors;
+}
+
+router.delete("/regions/:id/shops", protectRoute, async (req, res) => {
+        try {
+                if (!req.user) {
+                        console.log('No auth provided');
+                        return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+                }
+
+
+                const region_id = req.params.id;
+                let b = req.body || {};
+
+                validateDeletePayload(b);
+
+                const { data: region_data, error: region_error } = await supabase
+                        .from("regions")
+                        .select("shops")
+                        .eq('id', region_id)
+                        .contains('owners', [req.user.id])
+                        .single();
+
+                if (region_error) {
+                        console.error('Unable to find region:', region_error);
+                        return res.status(400).json({ error: 'bad_request', details: region_error });
+                }
+
+                if (!region_data.shops.includes(b.shop_id)) {
+                        var err = `Unable to find shop: ${b.shop_id}`;
+                        console.error(err);
+                        return res.status(400).json({ error: 'bad_request', details: err });
+                }
+
+                const { error: shop_error } = await supabase
+                        .from("shops")
+                        .delete()
+                        .eq('id', b.shop_id);
+
+                if (shop_error) {
+                        console.error('Unable to find shop:', shop_error);
+                        return res.status(400).json({ error: 'bad_request', details: shop_error });
+                }
+
+                return res.status(201).json({ ok: true });
         } catch (e) {
                 console.error('ingest error', e);
                 return res.status(500).json({ error: 'server_error' });

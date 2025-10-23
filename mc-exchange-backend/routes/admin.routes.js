@@ -1,5 +1,7 @@
 import express from "express";
 import { supabase } from "../config/supabaseClient.js";
+import { protectRoute } from "../middleware/authMiddleWare.js";
+
 
 const router = express.Router();
 
@@ -41,7 +43,7 @@ function validateRegionCreatePayload(p) {
   const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required feilds
-  [['name', needStr], ['slug', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+  [['name', needStr], ['slug', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
@@ -90,7 +92,6 @@ router.post("/regions", async (req, res) => {
     name: b.name,
     slug: b.slug,
     dimension: b.dimension,
-    owner: b.owner,
     bounds: formatted_bounds
   }
 
@@ -117,7 +118,7 @@ function validatePatchRegionPayload(p) {
   const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required feilds
-  [['name', optStr], ['slug', optStr], ['owner', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
+  [['name', optStr], ['slug', optStr], ['owners', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 
@@ -167,8 +168,8 @@ router.patch("/regions/:id", async (req, res) => {
   if (b.dimension)
     insertData['dimension'] = b.dimension;
 
-  if (b.owner)
-    insertData['owner'] = b.owner;
+  if (b.owners)
+    insertData['owners'] = b.owners;
 
   if (b.bounds) {
     const formatted_bounds = b.bounds.map(
