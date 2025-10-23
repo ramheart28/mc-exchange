@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
+//GET handler for fetching shops in a region
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -108,3 +109,11 @@ export async function POST(
     );
   }
 }
+
+
+
+//POST Create region
+
+//PATCH Edit Region
+
+//DELETE Region

@@ -8,3 +8,9 @@ export default function AdminPage() {
     </div>
   );
 }
+
+// Simple Admin Page
+// Create Regions
+// Delete Regions 
+// List of Regions
+// Assign Users to Regions as Regions Owners

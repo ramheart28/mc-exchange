@@ -3,6 +3,7 @@ import { supabase } from "../config/supabaseClient.js";
 
 const router = express.Router();
 
+// Download all shop events as JSON
 router.get("/all", async (req, res) => {
   const { data, error } = await supabase
     .from("shop_events")
@@ -18,6 +19,7 @@ router.get("/all", async (req, res) => {
   res.send(json);
 });
 
+// Get all regions as JSON
 router.get("/regions", async (req, res) => {
   const { data, error } = await supabase
     .from("regions")
