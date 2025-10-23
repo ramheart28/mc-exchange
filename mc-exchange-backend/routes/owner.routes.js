@@ -143,7 +143,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                         console.log('No auth provided');
                         return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
                 }
-
+                       
                 const region_id = req.params.id;
                 let b = req.body || {};
                 const { data: region_data, error: region_error } = await supabase
@@ -168,11 +168,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                         return res.status(400).json({ error: 'bad_request', details: shop_error });
                 }
 
-                const json = JSON.stringify(shops_data, null, 2)
-
-                res.setHeader("Content-Type", "text/json");
-                res.setHeader("Content-Disposition", "attachment; filename=shops.json");
-                res.send(json);
+                return res.status(201).json({ ok: true, shops: shops_data });
         } catch (e) {
                 console.error('ingest error', e);
                 return res.status(500).json({ error: 'server_error' });
@@ -261,11 +257,7 @@ router.get("/regions", protectRoute, async (req, res) => {
 
         if (error) return res.status(500).send(error.message);
 
-        const json = JSON.stringify(data, null, 2)
-
-        res.setHeader("Content-Type", "text/json");
-        res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
-        res.send(json);
+        return res.status(200).json({ ok: true, regions: data });
 });
 
 export { router };

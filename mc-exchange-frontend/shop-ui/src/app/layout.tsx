@@ -13,8 +13,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <main>
-          {children}
-    </main>
+    <html lang="en">
+      <head>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js" />
+        <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js" />
+      </head>
+      <body>{children}</body>
+    </html>
   );
 }
