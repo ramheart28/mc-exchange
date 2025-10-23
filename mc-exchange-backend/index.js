@@ -57,8 +57,10 @@ app.use(morgan("tiny"));
 
 import { router as owner_router } from "./routes/owner.routes.js";
 import { router as admin_router } from "./routes/admin.routes.js";
+import { router as user_router } from "./routes/user.routes.js";
 app.use("/owner", owner_router);
 app.use("/admin", admin_router);
+app.use("/user", user_router);
 
 // simple hash for deduplication
 function makeHash(raw) {
