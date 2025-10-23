@@ -4,6 +4,7 @@ import OwnerTopBar from '@/components/Owner/OwnerTopBar';
 import { Shop } from '@/types/shop';
 import ShopCard from '@/components/Owner/OwnerShopCards';
 import { supabaseBrowser } from '@/lib/supabase';
+import ShopEditAddModal from '@/components/Owner/ShopEditAddModal';
 
 export default function OwnerHomePage() {
   const [shops, setShops] = useState<Shop[]>([]);
@@ -11,6 +12,10 @@ export default function OwnerHomePage() {
   const [selectedRegion, setSelectedRegion] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingShop, setEditingShop] = useState<Shop | null>(null);
 
   const supabase = supabaseBrowser();
 
@@ -89,6 +94,88 @@ export default function OwnerHomePage() {
     fetchShops();
   }, [selectedRegion, supabase.auth]);
 
+  // Modal handlers
+  const handleAddShop = () => {
+    setEditingShop(null);
+    setModalOpen(true);
+  };
+
+  const handleEditShop = (shop: Shop) => {
+    setEditingShop(shop);
+    setModalOpen(true);
+  };
+
+  const handleShopSubmit = async (shopData: Partial<Shop>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      if (!selectedRegion) {
+        setError('No region selected');
+        setLoading(false);
+        return;
+      }
+
+      if (editingShop) {
+        // EDIT: PATCH /api/regions/:id/shops
+        const patchPayload = {
+          shop_id: editingShop.id,
+          name: shopData.name,
+          owner: shopData.owner,
+          // Add other editable fields if needed
+        };
+        const response = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(patchPayload)
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to edit shop');
+        }
+      } else {
+        // ADD: POST /api/regions/:id/shops
+        const response = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(shopData)
+        });
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create shop');
+        }
+      }
+
+      // Refresh shops after add/edit
+      const shopsRes = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const shopsData = await shopsRes.json();
+      setShops(shopsData.shops || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+      setModalOpen(false);
+      setEditingShop(null);
+    }
+  };
+
   // Prepare region info for OwnerTopBar
   const regionName = selectedRegion?.name || '';
   const shopCount = shops.length;
@@ -105,12 +192,13 @@ export default function OwnerHomePage() {
           lastUpdated={lastUpdated}
           bounds={selectedRegion?.bounds || []}
           owners={owners}
+          onAddShop={handleAddShop}
         />
       </div>
 
       {error && (
         <div className="p-4 mb-4 bg-yellow-100 border border-yellow-300 rounded-lg">
-          <p className="text-yellow-800"> {error}</p>
+          <p className="text-yellow-800">{error}</p>
         </div>
       )}
 
@@ -126,13 +214,25 @@ export default function OwnerHomePage() {
               <ShopCard
                 key={shop.name || index}
                 shop={shop}
-                onEdit={(shop) => console.log('Edit shop:', shop)}
+                onEdit={handleEditShop}
                 onDelete={(shopName) => console.log('Delete shop:', shopName)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ShopEditAddModal
+        open={modalOpen}
+        onClose={() => {
+          setModalOpen(false);
+          setEditingShop(null);
+        }}
+        onSubmit={handleShopSubmit}
+        regionId={selectedRegion?.id || ""}
+        owner={selectedRegion?.owner || ""}
+        initialShop={editingShop}
+      />
 
       <div>
         <p> Basic Stats</p>

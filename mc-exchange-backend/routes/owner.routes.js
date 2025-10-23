@@ -11,7 +11,7 @@ function validatePayload(p) {
         const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
         // required feilds
-        [['name', needStr], ['author', needStr], ['owner', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+        [['name', needStr], ['owner', needStr]].forEach(([k, fn]) => {
                 const e = fn(p[k], k); if (e) errors.push(e);
         });
 
@@ -80,7 +80,7 @@ router.post("/regions/:id/shops", protectRoute, async (req, res) => {
                         return res.status(400).json({ error: 'bad_request', details: err });
                 }
 
-                if (region_data.owners.contains(req.user.id)) {
+                if (!region_data.owners.includes(req.user.id)) {
                         var err = `User is not in region owners`;
                         console.error("Region auth error: ", err)
                         return res.status(400).json({ error: 'bad_request', details: err });
@@ -93,9 +93,7 @@ router.post("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 const insertData = {
                         name: b.name,
-                        author: b.author,
                         owner: b.owner,
-                        dimension: b.dimension,
                         bounds: formatted_bounds,
                         region: region_data['id']
                 }

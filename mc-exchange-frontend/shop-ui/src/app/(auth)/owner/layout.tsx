@@ -63,16 +63,16 @@ export default function OwnerLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
-        <VantaBackground />
-      <div className="relative p-2 z-10 flex min-h-screen text-pv-text-primary">
-        <Sidebar />
-        <div className="flex-1 flex h-screen flex-col">
-          <main className="flex-1 h-full overflow-y-auto">
-            {children}
-          </main>
-        </div>
+  <div className="relative min-h-screen overflow-hidden">
+    <VantaBackground />
+    <div className="relative p-2 z-10 flex items-start text-pv-text-primary">
+      <Sidebar role="owner" />
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
       </div>
     </div>
-  );
+  </div>
+);
 }

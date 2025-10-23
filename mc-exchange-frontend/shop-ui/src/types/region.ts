@@ -10,12 +10,12 @@ export interface Region {
 }
 
 export interface Bounds {
-    minx: number;
-    miny: number;
-    minz: number;
-    maxx: number;
-    maxy: number;
-    maxz: number;
+    min_x: number;
+    min_y: number;
+    min_z: number;
+    max_x: number;
+    max_y: number;
+    max_z: number;
 }
 export interface RegionOwners {
     region_id: string;

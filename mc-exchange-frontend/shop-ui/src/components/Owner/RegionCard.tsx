@@ -1,4 +1,4 @@
-import { formatMixedBounds } from '@/app/utils/formatBounds';
+import { formatBounds } from '@/app/utils/formatBounds';
 
 interface RegionCardProps {
   shopCount: string | number;
@@ -13,7 +13,7 @@ export default function RegionCard({
   owners,
   bounds,
 }: RegionCardProps) {
-  const boundsData = formatMixedBounds(bounds);
+  const boundsData = formatBounds(bounds);
 
   return (
     <div className="flex flex-wrap gap-4 justify-around m-4">

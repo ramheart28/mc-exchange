@@ -1,66 +1,45 @@
 import { Bounds } from '@/types/region';
 
-// Parse string format "(5,5,5,10,10,10)" to object with correct property names
-export const parseBounds = (boundString: string) => {
-    const coords = boundString.slice(1, -1).split(',').map(Number);
-    return {
-        minx: coords[0],
-        miny: coords[1], 
-        minz: coords[2],
-        maxx: coords[3],
-        maxy: coords[4],
-        maxz: coords[5]
-    };
-};
-
-// Parse an array of bound strings
-export const parseShopBounds = (bounds: string[]) => {
-    return bounds.map(boundString => parseBounds(boundString));
-};
-
-// Format Bounds objects for display
-export const formatBounds = (bounds: Bounds[]) => {
-    if (!bounds || bounds.length === 0) {
-        return { corner1: 'No data', corner2: 'No data' };
-    }
-    
-    const bound = bounds[0];
-    return {
-        corner1: `${bound.minx}, ${bound.miny}, ${bound.minz}`,
-        corner2: `${bound.maxx}, ${bound.maxy}, ${bound.maxz}`
-    };
-};
-
-// Format as single string
-export const formatBoundsString = (bounds: Bounds[]) => {
-    if (!bounds || bounds.length === 0) {
-        return 'No bounds data';
-    }
-    
-    const bound = bounds[0];
-    return `${bound.minx},${bound.miny},${bound.minz} to ${bound.maxx},${bound.maxy},${bound.maxz}`;
-};
-
-// Utility to handle both string and object formats
-export const formatMixedBounds = (bounds: (string | Bounds)[]) => {
-    if (!bounds || bounds.length === 0) {
-        return { corner1: 'No data', corner2: 'No data' };
-    }
-    
-    const bound = bounds[0];
-    
-    // If it's a string, parse it first
+// Parse a single bound, handling both string and object formats
+export const parseBounds = (bound: string | Bounds): Bounds => {
     if (typeof bound === 'string') {
-        const parsed = parseBounds(bound);
+        const coords = bound.slice(1, -1).split(',').map(Number);
         return {
-            corner1: `${parsed.minx}, ${parsed.miny}, ${parsed.minz}`,
-            corner2: `${parsed.maxx}, ${parsed.maxy}, ${parsed.maxz}`
+            min_x: coords[0],
+            min_y: coords[1],
+            min_z: coords[2],
+            max_x: coords[3],
+            max_y: coords[4],
+            max_z: coords[5]
         };
     }
-    
-    // If it's already an object
+    // If already an object, return as is
+    return bound;
+};
+
+// Parse an array of bounds (strings or objects) into Bounds[]
+export const parseAllBounds = (bounds: (string | Bounds)[] = []): Bounds[] => {
+    if (!Array.isArray(bounds)) return [];
+    return bounds.map(parseBounds);
+};
+
+// Format the first bound for display as corners
+export const formatBounds = (bounds: (string | Bounds)[] = []) => {
+    const parsed = parseAllBounds(bounds);
+    if (!parsed.length) {
+        return { corner1: 'No data', corner2: 'No data' };
+    }
+    const b = parsed[0];
     return {
-        corner1: `${bound.minx}, ${bound.miny}, ${bound.minz}`,
-        corner2: `${bound.maxx}, ${bound.maxy}, ${bound.maxz}`
+        corner1: `${b.min_x}, ${b.min_y}, ${b.min_z}`,
+        corner2: `${b.max_x}, ${b.max_y}, ${b.max_z}`
     };
+};
+
+// Format the first bound as a single string
+export const formatBoundsString = (bounds: (string | Bounds)[] = []) => {
+    const parsed = parseAllBounds(bounds);
+    if (!parsed.length) return 'No bounds data';
+    const b = parsed[0];
+    return `${b.min_x},${b.min_y},${b.min_z} to ${b.max_x},${b.max_y},${b.max_z}`;
 };

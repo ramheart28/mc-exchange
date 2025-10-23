@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import EditAddShopButton from './EditAddShopButton';
 import { Shop } from '@/types/shop';
-import { formatMixedBounds } from '@/app/utils/formatBounds';
+import { formatBounds} from '@/app/utils/formatBounds';
 
 interface ShopCardProps {
   shop: Shop;
@@ -26,7 +26,7 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
   const displayImage = imageError ? fallbackImage : (shop.image || fallbackImage);
   
   // Get formatted bounds
-  const boundsData = formatMixedBounds(shop.bounds);
+  const boundsData = formatBounds(shop.bounds);
 
   return (
     <div className="bg-pv-surface-elevated border border-pv-border p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 w-100">
@@ -48,12 +48,7 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
       </h3>
 
       {/* Shop Details */}
-      <div className="space-y-3 mb-6">
-        <div className="flex justify-between">
-          <span className="text-pv-text-secondary text-sm">Author:</span>
-          <span className="text-pv-text-primary text-sm font-medium">{shop.auther}</span>
-        </div>
-        
+      <div className="space-y-3 mb-6">        
         <div className="flex justify-between">
           <span className="text-pv-text-secondary text-sm">Owner:</span>
           <span className="text-pv-text-primary text-sm font-medium">{shop.owner}</span>
