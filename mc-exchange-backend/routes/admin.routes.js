@@ -1,12 +1,11 @@
 import express from "express";
 import { supabase } from "../config/supabaseClient.js";
-import { protectRoute } from "../middleware/authMiddleWare.js";
-
+import { adminProtectRoute, protectRoute } from "../middleware/authMiddleWare.js";
 
 const router = express.Router();
 
 // Download all shop events as JSON
-router.get("/all", async (req, res) => {
+router.get("/all", protectRoute, adminProtectRoute, async (req, res) => {
   const { data, error } = await supabase
     .from("shop_events")
     .select("*")
@@ -14,15 +13,11 @@ router.get("/all", async (req, res) => {
 
   if (error) return res.status(500).send(error.message);
 
-  const json = JSON.stringify(data, null, 2)
-
-  res.setHeader("Content-Type", "text/json");
-  res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
-  res.send(json);
+  return res.status(201).json({ ok: true, data });
 });
 
 // Get all regions as JSON
-router.get("/regions", async (req, res) => {
+router.get("/regions", protectRoute, adminProtectRoute, async (req, res) => {
   const { data, error } = await supabase
     .from("regions")
     .select("*")
@@ -30,11 +25,7 @@ router.get("/regions", async (req, res) => {
 
   if (error) return res.status(500).send(error.message);
 
-  const json = JSON.stringify(data, null, 2)
-
-  res.setHeader("Content-Type", "text/json");
-  res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
-  res.send(json);
+  return res.status(201).json({ ok: true, data });
 });
 
 function validateRegionCreatePayload(p) {
@@ -75,7 +66,7 @@ function validateRegionCreatePayload(p) {
 }
 
 
-router.post("/regions", async (req, res) => {
+router.post("/regions", protectRoute, adminProtectRoute, async (req, res) => {
   var b = req.body || {};
 
   let errs = validateRegionCreatePayload(b);
@@ -147,7 +138,7 @@ function validatePatchRegionPayload(p) {
   return errors;
 }
 
-router.patch("/regions/:id", async (req, res) => {
+router.patch("/regions/:id", protectRoute, adminProtectRoute, async (req, res) => {
   const id = req.params.id;
   const b = req.body || {};
 
@@ -190,7 +181,7 @@ router.patch("/regions/:id", async (req, res) => {
   return res.status(201).json({ ok: true, id });
 })
 
-router.delete("/regions/:id", async (req, res) => {
+router.delete("/regions/:id", protectRoute, adminProtectRoute, async (req, res) => {
   const id = req.params.id;
   const { error } = await supabase.from('regions').delete().eq('id', id);
 
@@ -228,17 +219,13 @@ async function getTotal() {
   return data.length;
 }
 
-router.get("/stats", async (_, res) => {
+router.get("/stats", protectRoute, adminProtectRoute, async (_, res) => {
   let data = { total: await getTotal(), halfday: await getHalfDayCount() };
 
-  const json = JSON.stringify(data, null, 2)
-
-  res.setHeader("Content-Type", "text/json");
-  res.setHeader("Content-Disposition", "attachment; filename=stats.json");
-  res.send(json);
+  return res.status(201).json({ ok: true, data });
 })
 
-router.get("/users", async (req, res) => {
+router.get("/users", protectRoute, adminProtectRoute, async (req, res) => {
   let b = req.body || {};
 
   let page = 1;
@@ -262,9 +249,7 @@ router.get("/users", async (req, res) => {
 
   console.log('All users:', users);
 
-  res.setHeader("Content-Type", "text/json");
-  res.setHeader("Content-Disposition", "attachment; filename=users.json");
-  res.send(users);
+  return res.status(201).json({ ok: true, users });
 });
 
 function validatePatchUserPayload(p) {
@@ -273,13 +258,15 @@ function validatePatchUserPayload(p) {
   const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required feilds
-  [['name', optStr], ['role', optStr], ['regions', optStr]].forEach(([k, fn]) => {
+  [['name', optStr], ['role', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
 }
 
-router.patch("/users/:id", async (req, res) => {
+router.patch("/users/:id", protectRoute, adminProtectRoute, async (req, res) => {
   var b = req.body || {};
+
+  const id = req.params.id;
 
   var errs = validatePatchUserPayload(p);
   if (errs.length) {
@@ -287,14 +274,20 @@ router.patch("/users/:id", async (req, res) => {
     return res.status(400).json({ error: 'bad_request', details: errs });
   }
 
+
+  let updateData = {};
   if (b.name)
-    insertData['name'] = b.name;
+    updateData['name'] = b.name;
 
-  if (b.slug)
-    insertData['role'] = b.role;
+  if (b.role)
+    updateData['role'] = b.role;
 
-  if (b.dimension)
-    insertData['regions'] = b.regions;
+  const { error } = supabase.from('users').update(updateData).eq('id', id).single();
+  if (error) {
+    console.log('Error updating user: ', error.message);
+    return res.status(500).json({ error: 'db_error', details: error.message });
+  }
+
 });
 
 

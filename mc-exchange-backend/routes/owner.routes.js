@@ -122,7 +122,7 @@ router.post("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 if (region_find_error) {
                         console.error('Unable to update region:', update_region_error);
-                        return res.status(400).json({ error: 'bad_request', details: update_region_error });
+                        return res.status(500).json({ error: 'bad_request', details: update_region_error });
                 }
 
                 console.log('Successfully inserted exchange data with name:', b.name);
@@ -153,7 +153,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 if (region_error) {
                         console.error('Unable to find region:', region_error);
-                        return res.status(400).json({ error: 'bad_request', details: region_error });
+                        return res.status(500).json({ error: 'bad_request', details: region_error });
                 }
 
                 const { data: shops_data, error: shop_error } = await supabase
@@ -163,7 +163,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 if (shop_error) {
                         console.error('Unable to find shop:', shop_error);
-                        return res.status(400).json({ error: 'bad_request', details: shop_error });
+                        return res.status(500).json({ error: 'bad_request', details: shop_error });
                 }
 
                 return res.status(201).json({ ok: true, shops: shops_data });

@@ -72,11 +72,35 @@ router.get("/exchanges/shop", async (req, res) => {
 
   if (error) return res.status(500).send(error.message);
 
-  const json = JSON.stringify(data, null, 2)
+  return res.status(201).json({ ok: true, data });
+});
 
-  res.setHeader("Content-Type", "text/json");
-  res.setHeader("Content-Disposition", "attachment; filename=shop_events.json");
-  res.send(json);
+function validateGetUserPayload(p) {
+  const errors = [];
+  const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+
+  // required feilds
+  [['id', needStr]].forEach(([k, fn]) => {
+    const e = fn(p[k], k); if (e) errors.push(e);
+  });
+
+  return errors;
+}
+
+router.get("/user", async (req, res) => {
+  var b = req.body || {};
+
+  validateGetUserPayload(b);
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("name")
+    .eq('id', b.id)
+    .single();
+
+  if (error) return res.status(500).send(error.message);
+
+  return res.status(201).json({ ok: true, data });
 });
 
 export { router };
