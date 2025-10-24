@@ -43,3 +43,19 @@ export const formatBoundsString = (bounds: (string | Bounds)[] = []) => {
     const b = parsed[0];
     return `${b.min_x},${b.min_y},${b.min_z} to ${b.max_x},${b.max_y},${b.max_z}`;
 };
+
+//Get Center of Bounds
+export function getBoundsCenter(bounds: (string | Bounds)[] = []): string | null {
+  if (!bounds || bounds.length === 0) return null;
+
+  // Use your parseAllBounds utility to normalize the data
+  const parsed = parseAllBounds(bounds);
+  if (!parsed.length) return null;
+  const b = parsed[0];
+
+  // Now b is a Bounds object
+  const centerX = Math.floor((b.min_x + b.max_x) / 2);
+  const centerY = Math.floor((b.min_y + b.max_y) / 2);
+  const centerZ = Math.floor((b.min_z + b.max_z) / 2);
+  return `${centerX}, ${centerY}, ${centerZ}`;
+}

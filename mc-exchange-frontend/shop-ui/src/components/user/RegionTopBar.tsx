@@ -1,4 +1,8 @@
 import Link from 'next/link';
+// Update the import path below if the file is located elsewhere, for example:
+// Update the import path below if the file is located elsewhere, for example:
+// import getBoundsCenter from '../utils/formatBounds';
+import { getBoundsCenter } from '@/app/utils/formatBounds';
 
 export default function RegionTopBar({ region }: { region: { name: string; bounds: string[] } }) {
   return (
@@ -9,7 +13,7 @@ export default function RegionTopBar({ region }: { region: { name: string; bound
         </h1>
         {region && (
           <div className="text-left text-gray-300 mb-0">
-            Bounds: {region.bounds?.join(" | ")}
+            Location: {getBoundsCenter(region.bounds) || "N/A"}
           </div>
         )}
       </div>

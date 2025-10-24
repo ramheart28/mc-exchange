@@ -9,14 +9,14 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
   return (
     <div className="overflow-x-auto ">
       <table className="min-w-full rounded shadow">
-        <thead>
-          <tr>
+        <thead >
+          <tr className="border-b border-pv-accent-border">
             <th className="px-4 py-2 text-left text-xs font-semibold text-white">Price</th>
             <th className="px-4 py-2 text-left text-xs font-semibold text-white ">Item</th>
             <th className="px-4 py-2 text-left text-xs font-semibold text-white">Last Updated</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-pv-border">
           {events.map((event) => (
             <tr key={event.ts + event.input_item_id + event.output_item_id}>
               <td className="px-4 py-2 text-sm text-white">
