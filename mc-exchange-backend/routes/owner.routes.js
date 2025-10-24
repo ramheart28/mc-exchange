@@ -81,7 +81,7 @@ router.post("/regions/:id/shops", protectRoute, async (req, res) => {
                         return res.status(400).json({ error: 'bad_request', details: err });
                 }
 
-                if (!region_data.owners.includes(req.user.id)) {
+                if (!req.admin && !region_data.owners.includes(req.user.id)) {
                         var err = `User is not in region owners`;
                         console.error("Region auth error: ", err)
                         return res.status(400).json({ error: 'bad_request', details: err });
@@ -148,13 +148,17 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 const region_id = req.params.id;
                 let b = req.body || {};
-                const { data: region_data, error: region_error } = await supabase
+                let query = supabase
                         .from("regions")
                         .select("shops")
-                        .eq('id', region_id)
-                        .contains('owners', [req.user.id])
-                        .single();
+                        .eq('id', region_id);
 
+                if (!req.admin)
+                        query = query.contains('owners', [req.user.id]);
+
+                query = query.single();
+
+                const { data: region_data, error: region_error } = await query;
                 if (region_error) {
                         console.error('Unable to find region:', region_error);
                         return res.status(500).json({ error: 'bad_request', details: region_error });
@@ -201,14 +205,17 @@ router.delete("/regions/:id/shops", protectRoute, async (req, res) => {
                 let b = req.body || {};
 
                 validateDeletePayload(b);
-
-                const { data: region_data, error: region_error } = await supabase
+                let query = supabase
                         .from("regions")
                         .select("shops")
-                        .eq('id', region_id)
-                        .contains('owners', [req.user.id])
-                        .single();
+                        .eq('id', region_id);
 
+                if (!req.admin)
+                        query = query.contains('owners', [req.user.id]);
+
+                query = query.single();
+
+                const { data: region_data, error: region_error } = await query;
                 if (region_error) {
                         console.error('Unable to find region:', region_error);
                         return res.status(400).json({ error: 'bad_request', details: region_error });
@@ -265,12 +272,17 @@ router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
 
                 validateUpdateShopPayload(b);
 
-                const { data: region_data, error: region_error } = await supabase
+                let query = supabase
                         .from("regions")
                         .select("shops")
-                        .eq('id', region_id)
-                        .contains('owners', [req.user.id])
-                        .single();
+                        .eq('id', region_id);
+
+                if (!req.admin)
+                        query = query.contains('owners', [req.user.id]);
+
+                query = query.single();
+
+                const { data: region_data, error: region_error } = await query;
 
                 if (region_error) {
                         console.error('Unable to find region:', region_error);
@@ -342,12 +354,17 @@ router.patch("/regions/:id", protectRoute, async (req, res) => {
                 if (b.image)
                         updateData.image = b.image;
 
-                const { error: region_error } = await supabase
+                let query = supabase
                         .from("regions")
                         .update(updateData)
-                        .eq('id', region_id)
-                        .contains('owners', [req.user.id])
-                        .single();
+                        .eq('id', region_id);
+
+                if (!req.admin)
+                        query = query.contains('owners', [req.user.id]);
+
+                query = query.single();
+
+                const { error: region_error } = await query;
 
                 if (region_error) {
                         console.error('Unable to find region:', region_error);
@@ -368,11 +385,16 @@ router.get("/regions", protectRoute, async (req, res) => {
                 return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
         }
 
-        const { data, error } = await supabase
+        let query = supabase
                 .from("regions")
                 .select("*")
-                .contains('owners', [req.user.id])
-                .order("name", { ascending: false });
+
+        if (!req.admin)
+                query = query.contains('owners', [req.user.id]);
+
+        query = query.order("name", { ascending: false });
+
+        const { data, error } = await query;
 
         if (error) return res.status(500).send(error.message);
 
