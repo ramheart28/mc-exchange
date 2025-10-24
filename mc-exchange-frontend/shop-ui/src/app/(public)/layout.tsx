@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/globals.css";
+import VantaBackground from "@/components/vanta/VantaBackground";
 
 
 export const metadata: Metadata = {
@@ -13,8 +14,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <main>
+  <div className="relative min-h-screen overflow-hidden">
+    <VantaBackground />
+    <div className="relative p-6 z-10 flex items-start text-pv-text-primary">
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 overflow-y-auto">
           {children}
-    </main>
-  );
+        </main>
+      </div>
+      </div>
+    </div>
+);
 }
+

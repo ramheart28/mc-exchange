@@ -1,16 +1,7 @@
-"use client";
-import React, { useEffect, useState } from 'react';
-import RegionPage from './[slug]/page';
 
-const REGION_SLUG = "pavia";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-
-
-  return (
-    <div>
-      <RegionPage slug={REGION_SLUG} />
-    </div>
-    
-  );
+  redirect("/pavia");
+  return null;
 }
