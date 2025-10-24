@@ -1,8 +1,8 @@
-// filepath: src/app/api/user/regions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 
+// GET /api/user/regions
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

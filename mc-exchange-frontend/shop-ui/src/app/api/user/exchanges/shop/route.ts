@@ -14,12 +14,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing shop parameter" }, { status: 400 });
   }
 
-  const url = `${BACKEND_URL}/exchanges/shop?shop=${encodeURIComponent(shop)}`;
+  const url = `${BACKEND_URL}/user/exchanges/shop?shop=${encodeURIComponent(shop)}`;
 
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: token } : {}),
     },
   });
 

@@ -10,3 +10,15 @@ export interface Shop {
     region: string;
     image?: string; // URL to image
 }
+
+export interface ShopEvent {
+  ts: string;
+  input_item_id: string;
+  input_qty: number;
+  output_item_id: string;
+  output_qty: number;
+  exchange_possible: boolean;
+  compacted_input: string;
+  compacted_output: string;
+  shop: string;
+}

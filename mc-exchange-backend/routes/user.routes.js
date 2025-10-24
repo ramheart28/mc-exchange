@@ -3,25 +3,24 @@ import { supabase } from "../config/supabaseClient.js";
 
 const router = express.Router();
 
+//gets all regions or by slug
 router.get("/regions", async (req, res) => {
-  const { data, error } = await supabase
-    .from("regions")
-    .select("shops, name, slug, bounds")
-    .order("name", { ascending: false });
-
+  const { slug } = req.query;
+  let query = supabase.from("regions").select("id, name, bounds, slug, shops");
+  if (slug) query = query.eq("slug", slug);
+  const { data, error } = await query.order("name", { ascending: false });
   if (error) return res.status(500).send(error.message);
-
   return res.status(200).json({ ok: true, regions: data });
 });
 
-router.get("/regions/:id/shops", async (req, res) => {
+router.get("/regions/:slug/shops", async (req, res) => {
   try {
-    const region_id = req.params.id;
+    const region_slug = req.params.slug;
     let b = req.body || {};
     const { data: region_data, error: region_error } = await supabase
       .from("regions")
       .select("shops")
-      .eq('id', region_id)
+      .eq('slug', region_slug)
       .single();
 
     if (region_error) {
@@ -31,7 +30,7 @@ router.get("/regions/:id/shops", async (req, res) => {
 
     const { data: shops_data, error: shop_error } = await supabase
       .from("shops")
-      .select("name, created_at, owner, region, bounds")
+      .select("id, name, created_at, owner, region, bounds")
       .in('id', region_data.shops);
 
     if (shop_error) {
@@ -60,19 +59,20 @@ function validatePayload(p) {
 }
 
 router.get("/exchanges/shop", async (req, res) => {
-  var b = req.body || {};
-
-  validatePayload(b);
+  const shopId = req.query.shop;
+  if (!shopId) {
+    return res.status(400).json({ error: "Missing shop id" });
+  }
 
   const { data, error } = await supabase
     .from("shop_events")
     .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop")
-    .eq('shop', b.shop)
+    .eq('shop', shopId)
     .order("ts", { ascending: false });
 
   if (error) return res.status(500).send(error.message);
 
-  return res.status(201).json({ ok: true, data });
+  return res.status(200).json({ ok: true, data: data || [] });
 });
 
 function validateGetUserPayload(p) {
