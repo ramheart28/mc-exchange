@@ -233,13 +233,15 @@ export default function OwnerHomePage() {
         owner={selectedRegion?.owner || ""}
         initialShop={editingShop}
       />
-
-      <div>
-        <p> Basic Stats</p>
-      </div>
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <p>Beacon Market</p>
+        <p>Beacon</p>
       </footer>
     </div>
   );
 }
+
+
+// Owners Changed to be readale
+// Owner Banner a lot smaller
+// last updated? -> remove
+// Add Region Img

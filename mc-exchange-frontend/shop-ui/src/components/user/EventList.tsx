@@ -35,3 +35,8 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
     </div>
   );
 }
+
+// Add Compcated items
+// Add Buy / Sell Indicators
+// Import icons for items
+// Infinite scroll or pagination for large event lists

@@ -22,9 +22,11 @@ export default function RegionTopBar({ region }: { region: { name: string; bound
           href="/login"
           className="bg-pv-surface-elevated hover:bg-pv-secondary border border-pv-accent-border text-white px-6 py-2 rounded-lg font-medium transition-colors w-auto"
         >
-          Login
+          Nation Owner
         </Link>
       </div>
     </div>
   );
 }
+
+// Shop Count

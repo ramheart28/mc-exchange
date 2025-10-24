@@ -6,7 +6,7 @@ interface Region {
   id: string;
   name: string;
   owners: string[];
-  bounds: string[];
+  bounds: any[]; // Now an array of bounds objects
   dimension: string;
 }
 
@@ -21,14 +21,19 @@ export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [newRegion, setNewRegion] = useState({ name: "", slug: "", dimension: "", owner: "", bounds: "" });
+  const [newRegion, setNewRegion] = useState({ name: "", slug: "", dimension: "", owner: "" });
+  const [minX, setMinX] = useState("");
+  const [minY, setMinY] = useState("");
+  const [minZ, setMinZ] = useState("");
+  const [maxX, setMaxX] = useState("");
+  const [maxY, setMaxY] = useState("");
+  const [maxZ, setMaxZ] = useState("");
   const supabase = supabaseBrowser();
 
   // Fetch regions and users
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      // Get the current session/token from Supabase
       const { data } = await supabase.auth.getSession();
       const token = data?.session?.access_token;
       const headers: Record<string, string> = {};
@@ -53,16 +58,32 @@ export default function AdminPage() {
     const token = data?.session?.access_token;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    // Parse all values as numbers and always assign min/max correctly
+    const x1 = Number(minX), x2 = Number(maxX);
+    const y1 = Number(minY), y2 = Number(maxY);
+    const z1 = Number(minZ), z2 = Number(maxZ);
+
+    const boundsObj = {
+      min_x: Math.min(x1, x2),
+      max_x: Math.max(x1, x2),
+      min_y: Math.min(y1, y2),
+      max_y: Math.max(y1, y2),
+      min_z: Math.min(z1, z2),
+      max_z: Math.max(z1, z2),
+    };
+
     await fetch("/api/admin/regions", {
       method: "POST",
       headers,
       body: JSON.stringify({
         ...newRegion,
-        bounds: [JSON.parse(newRegion.bounds)],
+        bounds: [boundsObj],
       }),
     });
     setShowCreate(false);
-    setNewRegion({ name: "", slug: "", dimension: "", owner: "", bounds: "" });
+    setNewRegion({ name: "", slug: "", dimension: "", owner: "" });
+    setMinX(""); setMinY(""); setMinZ(""); setMaxX(""); setMaxY(""); setMaxZ("");
     // Refresh regions
     const refreshHeaders: Record<string, string> = {};
     if (token) refreshHeaders['Authorization'] = `Bearer ${token}`;
@@ -139,13 +160,59 @@ export default function AdminPage() {
               onChange={e => setNewRegion(r => ({ ...r, owner: e.target.value }))}
               required
             />
-            <input
-              className="bg-gray-900 border border-gray-700 rounded px-3 py-2"
-              placeholder='Bounds (e.g. {"min_x":0,"min_y":0,"min_z":0,"max_x":10,"max_y":10,"max_z":10})'
-              value={newRegion.bounds}
-              onChange={e => setNewRegion(r => ({ ...r, bounds: e.target.value }))}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium mb-1">Bounds</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  placeholder="Min X"
+                  value={minX}
+                  onChange={e => setMinX(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Max X"
+                  value={maxX}
+                  onChange={e => setMaxX(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Min Y"
+                  value={minY}
+                  onChange={e => setMinY(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Max Y"
+                  value={maxY}
+                  onChange={e => setMaxY(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Min Z"
+                  value={minZ}
+                  onChange={e => setMinZ(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+                <input
+                  type="number"
+                  placeholder="Max Z"
+                  value={maxZ}
+                  onChange={e => setMaxZ(e.target.value)}
+                  className="border rounded px-2 py-1"
+                  required
+                />
+              </div>
+            </div>
             <div className="flex gap-2">
               <button type="submit" className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">Create</button>
               <button type="button" className="bg-gray-700 px-4 py-2 rounded" onClick={() => setShowCreate(false)}>Cancel</button>
@@ -167,7 +234,11 @@ export default function AdminPage() {
                   <div className="font-bold">{region.name}</div>
                   <div className="text-sm text-gray-400">Owners: {region.owners?.join(", ") || "None"}</div>
                   <div className="text-sm text-gray-400">Dimension: {region.dimension}</div>
-                  <div className="text-sm text-gray-400">Bounds: {region.bounds?.join(" | ")}</div>
+                  <div className="text-sm text-gray-400">
+                    Bounds: {region.bounds && region.bounds.length > 0
+                      ? `(${region.bounds[0].min_x},${region.bounds[0].min_y},${region.bounds[0].min_z}) → (${region.bounds[0].max_x},${region.bounds[0].max_y},${region.bounds[0].max_z})`
+                      : "None"}
+                  </div>
                 </div>
                 <button
                   className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded mt-2 md:mt-0"
