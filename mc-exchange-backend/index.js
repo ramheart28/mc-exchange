@@ -108,7 +108,7 @@ app.post('/api/exchanges', async (req, res) => {
                 }).single();
 
                 let shop_id = null;
-                if (!find_shop_error) {
+                if (!shop_find_error) {
                         shop_id = shop_data.id;
                 }
 
