@@ -7,11 +7,12 @@ router.use(express.json())
 
 function validatePayload(p) {
         const errors = [];
+        const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
         const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
         const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
         // required feilds
-        [['name', needStr], ['owner', needStr]].forEach(([k, fn]) => {
+        [['name', needStr], ['owner', needStr], ['image', optStr]].forEach(([k, fn]) => {
                 const e = fn(p[k], k); if (e) errors.push(e);
         });
 
@@ -97,6 +98,9 @@ router.post("/regions/:id/shops", protectRoute, async (req, res) => {
                         bounds: formatted_bounds,
                         region: region_data['id']
                 }
+
+                if (b.image)
+                        insertData.image = b.image;
 
                 console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
 
@@ -233,7 +237,7 @@ router.delete("/regions/:id/shops", protectRoute, async (req, res) => {
         }
 });
 
-function validateUpdatePayload(p) {
+function validateUpdateShopPayload(p) {
         const errors = [];
         const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
         const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
@@ -242,12 +246,13 @@ function validateUpdatePayload(p) {
         const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
         // required feilds
-        [['shop_id', needStr], ['name', optStr], ['owner', optStr]].forEach(([k, fn]) => {
+        [['shop_id', needStr], ['name', optStr], ['owner', optStr], ['image', optStr]].forEach(([k, fn]) => {
                 const e = fn(p[k], k); if (e) errors.push(e);
         });
 
         return errors;
 }
+
 router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
         try {
                 if (!req.user) {
@@ -258,7 +263,7 @@ router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
                 const region_id = req.params.id;
                 let b = req.body || {};
 
-                validateUpdatePayload(b);
+                validateUpdateShopPayload(b);
 
                 const { data: region_data, error: region_error } = await supabase
                         .from("regions")
@@ -283,6 +288,8 @@ router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
                         updateData.name = b.name;
                 if (b.owner)
                         updateData.owner = b.owner;
+                if (b.image)
+                        updateData.image = b.image;
 
                 const { error: shop_error } = await supabase
                         .from("shops")
@@ -295,6 +302,60 @@ router.patch("/regions/:id/shops", protectRoute, async (req, res) => {
                 }
 
                 return res.status(201).json({ ok: true, id: b.shop_id });
+        } catch (e) {
+                console.error('ingest error', e);
+                return res.status(500).json({ error: 'server_error' });
+        }
+});
+
+function validateUpdateRegionPayload(p) {
+        const errors = [];
+        const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+        const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+
+        const needInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
+        const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+
+        // required feilds
+        [['name', optStr], ['image', optStr]].forEach(([k, fn]) => {
+                const e = fn(p[k], k); if (e) errors.push(e);
+        });
+
+        return errors;
+}
+
+router.patch("/regions/:id", protectRoute, async (req, res) => {
+        try {
+                if (!req.user) {
+                        console.log('No auth provided');
+                        return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
+                }
+
+                const region_id = req.params.id;
+                let b = req.body || {};
+
+                validateUpdateRegionPayload(b);
+
+                let updateData = {};
+                if (b.name)
+                        updateData.name = b.name;
+                if (b.image)
+                        updateData.image = b.image;
+
+                const { error: region_error } = await supabase
+                        .from("regions")
+                        .update(updateData)
+                        .eq('id', region_id)
+                        .contains('owners', [req.user.id])
+                        .single();
+
+                if (region_error) {
+                        console.error('Unable to find region:', region_error);
+                        return res.status(400).json({ error: 'bad_request', details: region_error });
+                }
+
+
+                return res.status(201).json({ ok: true, id: region_id });
         } catch (e) {
                 console.error('ingest error', e);
                 return res.status(500).json({ error: 'server_error' });
