@@ -101,3 +101,4 @@ public class ChatRelayService {
     public boolean compacted_output;
   }
 }
+
