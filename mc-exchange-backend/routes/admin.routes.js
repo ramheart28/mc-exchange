@@ -261,6 +261,7 @@ function validatePatchUserPayload(p) {
   [['name', optStr], ['role', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
+  return errors;
 }
 
 router.patch("/users/:id", protectRoute, adminProtectRoute, async (req, res) => {
@@ -268,12 +269,12 @@ router.patch("/users/:id", protectRoute, adminProtectRoute, async (req, res) => 
 
   const id = req.params.id;
 
-  var errs = validatePatchUserPayload(p);
+
+  var errs = validatePatchUserPayload(b);
   if (errs.length) {
     console.log('Validation errors:', errs);
     return res.status(400).json({ error: 'bad_request', details: errs });
   }
-
 
   let updateData = {};
   if (b.name)
@@ -287,6 +288,8 @@ router.patch("/users/:id", protectRoute, adminProtectRoute, async (req, res) => 
     console.log('Error updating user: ', error.message);
     return res.status(500).json({ error: 'db_error', details: error.message });
   }
+
+  return res.status(201).json({ ok: true, id });
 
 });
 

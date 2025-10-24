@@ -23,19 +23,20 @@ export const adminProtectRoute = async (req, res, next) => {
                 return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
         }
 
-        const { data, error } = supabase.from('users').select('role').eq('id', req.user.id);
+        const { data, error } = await supabase
+                .from('users')
+                .select('role')
+                .eq('id', req.user.id);
 
-        if (error) {
+        if (error || !data || !data.length) {
                 console.log('Unable to find user');
                 return res.status(401).json({ error: 'bad_request', details: 'Unable to find user' });
         }
 
-
-        if (data.role !== 'admin') {
+        if (data[0].role !== 'admin') {
                 console.log('Unauthorized admin request');
                 return res.status(401).json({ error: 'bad_request', details: 'Unauthorized' });
         }
-
 
         next();
 };
