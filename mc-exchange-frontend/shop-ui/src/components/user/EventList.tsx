@@ -16,7 +16,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
   ) => {
     if (!descriptors || descriptors.length === 0) return null;
     return (
-      <div className="flex flex-col items-start gap-1">
+      <div className="flex w-full flex-wrap items-center justify-center gap-1.5">
         {descriptors.map((d, i) => {
           const bg = "bg-red-500/15";
           const text = "text-red-400";
@@ -32,74 +32,83 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
       </div>
     );
   };
-  const renderItem = (id: string | number, qty: number, isCompacted?: boolean) => {
+  
+  const renderItemColumn = (id: string | number, qty: number, isCompacted?: boolean) => {
     const idString = String(id);
     const hasFailed = failedImages.has(idString);
     const imageId = idString.endsWith("_armor_trim") ? `${idString}_smithing_template` : idString;
+
     return (
-      <div className="flex w-full items-center gap-4">
-        <div className="flex items-center gap-3">
-          {!hasFailed && (
-            <div className={`relative inline-block rounded p-1`}>
-              <Image
-                src={`https://mc.nerothe.com/img/1.21.8/minecraft_${imageId}.png`}
-                alt={idString}
-                width={28}
-                height={28}
-                onError={() =>
-                  setFailedImages((prev) => {
-                    const next = new Set(prev);
-                    next.add(idString);
-                    return next;
-                  })
-                }
-              />
-              <span className={`absolute bottom-0 right-0 translate-x-1 translate-y-1 rounded-sm bg-black/70 px-1 text-[12px] font-semibold leading-none ${isCompacted ? "text-red-400" : "text-white"}`}>
-                {qty}
-              </span>
-            </div>
-          )}
-          <span className="text-base">
-            {formatItemId(idString)}
-          </span>
+      <div className="flex h-full flex-col items-center justify-center">
+        {!hasFailed && (
+          <div className="relative inline-block rounded">
+            <Image
+              src={`https://mc.nerothe.com/img/1.21.8/minecraft_${imageId}.png`}
+              alt={idString}
+              width={48}
+              height={48}
+              onError={() =>
+                setFailedImages((prev) => {
+                  const next = new Set(prev);
+                  next.add(idString);
+                  return next;
+                })
+              }
+            />
+            <span className={`absolute bottom-0 right-0 translate-x-1 translate-y-1 rounded-sm bg-black/70 px-1 text-[12px] font-semibold leading-none ${isCompacted ? "text-red-400" : "text-white"}`}>
+              {qty}
+            </span>
+          </div>
+        )}
+        <div className="mt-2 text-center text-sm text-white">
+          {formatItemId(idString)}
         </div>
-        {renderDescriptors(isCompacted ? [{ label: "Compacted" }] : [])}
+        <div className="mt-1 w-full">
+          {renderDescriptors(isCompacted ? [{ label: "Compacted" }] : [])}
+        </div>
       </div>
     );
   };
+
   if (!events || events.length === 0) {
     return <div className="text-gray-400">No events for this shop.</div>;
   }
+
+
+
   return (
-    <div className="overflow-x-auto ">
-      <table className="min-w-full rounded shadow">
-        <thead >
-          <tr className="border-b border-pv-accent-border">
-            <th className="px-4 py-2 text-left text-xs font-semibold text-white">Price</th>
-            <th className="px-4 py-2 text-left text-xs font-semibold text-white ">Item</th>
-            <th className="px-4 py-2 text-left text-xs font-semibold text-white">Exchanges Available</th>
-            <th className="px-4 py-2 text-left text-xs font-semibold text-white">Last Updated</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-pv-border">
-          {events.map((event) => (
-            <tr key={event.ts + event.input_item_id + event.output_item_id}>
-              <td className="px-5 py-3 text-base text-white">
-                {renderItem(event.input_item_id as any, event.input_qty as any, (event as any).compacted_input)}
-              </td>
-              <td className="px-5 py-3 text-base text-white">
-                {renderItem(event.output_item_id as any, event.output_qty as any, (event as any).compacted_output)}
-              </td>
-              <td className="px-5 py-3 text-base text-white">
-                {event.exchange_possible}
-              </td>
-              <td className="px-5 py-3 text-base text-white whitespace-nowrap">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+      {events.map((event) => (
+        <div
+          key={event.ts + event.input_item_id + event.output_item_id}
+          className="aspect-square rounded-lg border border-pv-accent-border bg-black/20 p-3 shadow"
+        >
+          <div className="grid h-full grid-rows-[auto_1fr_auto]">
+            <div className="mb-2 text-center text-xs font-bold uppercase text-white/90">
+              {event.input_item_id === 'diamond' ? (
+                <span className="text-green-400">Buy</span>
+              ) : event.output_item_id === 'diamond' ? (
+                <span className="text-red-400">Sell</span>
+              ) : (
+                <span>Trade</span>
+              )}
+            </div>
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              {renderItemColumn(event.input_item_id as any, event.input_qty as any, (event as any).compacted_input)}
+              <div className="flex items-center justify-center text-white/70">
+                <span className="text-lg">→</span>
+              </div>
+              {renderItemColumn(event.output_item_id as any, event.output_qty as any, (event as any).compacted_output)}
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] text-white/70">
+              <span className="truncate">Exchanges: {event.exchange_possible}</span>
+              <span className="whitespace-nowrap">
                 {new Date(event.ts).toLocaleDateString(undefined, { month: "2-digit", day: "2-digit" })}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
