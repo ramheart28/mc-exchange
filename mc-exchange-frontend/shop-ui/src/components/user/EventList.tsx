@@ -52,15 +52,12 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
     if (isCompacted)
       descriptors = [...descriptors, { label: "Compacted", color: "red" }];
 
-    console.log(enchantments);
 
     if (enchantments)
-      for (let i = 0; i < enchantments.length; i++) {
-        descriptors = [...descriptors, ...enchantments.map(enchantment => ({
-          label: enchantment,
-          color: "blue"
-        }))]
-      }
+      descriptors = [...descriptors, ...enchantments.map(enchantment => ({
+        label: enchantment,
+        color: "blue"
+      }))]
 
     return (
       <div className="flex h-full flex-col items-center justify-center">
