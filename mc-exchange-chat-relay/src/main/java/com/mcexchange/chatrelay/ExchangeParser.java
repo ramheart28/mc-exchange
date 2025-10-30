@@ -3,7 +3,11 @@ package com.mcexchange.chatrelay;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.minecraft.util.math.BlockPos;
@@ -27,6 +31,80 @@ public class ExchangeParser {
     }
   }
 
+  private static final Set<String> ENCHANTMENT_LIST =
+      new HashSet<>(
+          Arrays.asList(
+              "Mending",
+              "Unbreaking",
+              "Curse of Vanishing",
+              "Aqua Affinity",
+              "Blast Protection",
+              "Curse of Binding",
+              "Depth Strider",
+              "Feather Falling",
+              "Fire Protection",
+              "Frost Walker",
+              "Projectile Protection",
+              "Protection",
+              "Respiration",
+              "Soul Speed",
+              "Thorns",
+              "Swift Sneak",
+              "Bane of Arthropods",
+              "Breach",
+              "Density",
+              "Efficiency",
+              "Fire Aspect",
+              "Looting",
+              "Impaling",
+              "Knockback",
+              "Sharpness",
+              "Smite",
+              "Sweeping Edge",
+              "Wind Burst",
+              "Channeling",
+              "Flame",
+              "Infinity",
+              "Loyalty",
+              "Riptide",
+              "Multishot",
+              "Piercing",
+              "Power",
+              "Punch",
+              "Quick Charge",
+              "Fortune",
+              "Luck of the Sea",
+              "Lure",
+              "Silk Touch"));
+
+  private static void parseEnchantment(String line, Vector<String> enchantments) {
+    String trimmedLine = line.trim();
+    String[] parts = trimmedLine.split("\\s+"); // Split by one or more spaces
+
+    if (parts.length < 1) {
+      return;
+    }
+
+    // The last part of the line is potentially the enchantment level
+    String potentialLevel = parts[parts.length - 1];
+
+    String enchantmentName = new String();
+
+    try {
+      Integer.parseInt(potentialLevel);
+      enchantmentName = String.join(" ", Arrays.copyOf(parts, parts.length - 1)).trim();
+    } catch (NumberFormatException e) {
+      enchantmentName = trimmedLine;
+    }
+
+    // The parts before the level form the enchantment name
+
+    // Check if the extracted name is a valid enchantment
+    if (ENCHANTMENT_LIST.contains(enchantmentName)) {
+      enchantments.add(line);
+    }
+  }
+
   private static List<ExchangeData> parseExchanges(
       String player, String rawMessage, String dimension, BlockPos pos) {
     List<ExchangeData> exchanges = new ArrayList<>();
@@ -37,6 +115,7 @@ public class ExchangeParser {
     int currentInputQty = 0;
     int currentOutputQty = 0;
     String currentOutput = null;
+    Vector<String> enchantments = new Vector<>();
 
     for (int i = 0; i < lines.length; i++) {
       String line = lines[i].trim();
@@ -58,6 +137,8 @@ public class ExchangeParser {
         }
         continue;
       }
+
+      // Parse output line: "Output: 2 Sand"
       if (line.startsWith("Output:") && currentInput != null) {
         Pattern outputPattern = Pattern.compile("Output: (\\d+) (.+)");
         Matcher outputMatcher = outputPattern.matcher(line);
@@ -67,7 +148,7 @@ public class ExchangeParser {
         }
       }
 
-      // Parse output line: "Output: 2 Sand"
+      parseEnchantment(line, enchantments);
     }
 
     if (currentOutput != null) {
@@ -88,6 +169,7 @@ public class ExchangeParser {
       exchange.hash_id = generateHashId(exchange);
       exchange.compacted_input = isCompactedItem(currentInput);
       exchange.compacted_output = isCompactedItem(currentOutput);
+      exchange.enchantments = enchantments.toArray(new String[0]);
 
       exchanges.add(exchange);
       ChatRelayMod.LOGGER.info(
@@ -164,5 +246,6 @@ public class ExchangeParser {
     public String hash_id;
     public boolean compacted_input;
     public boolean compacted_output;
+    public String[] enchantments;
   }
 }
