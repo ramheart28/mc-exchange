@@ -12,14 +12,24 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
       .join(" ");
   };
   const renderDescriptors = (
-    descriptors: Array<{ label: string }>
+    descriptors: Array<{ label: string, color: string }>
   ) => {
     if (!descriptors || descriptors.length === 0) return null;
     return (
       <div className="flex w-full flex-wrap items-center justify-center gap-1.5">
         {descriptors.map((d, i) => {
-          const bg = "bg-red-500/15";
-          const text = "text-red-400";
+          let bg = "";
+          let text = "";
+          switch (d.color) {
+            case "red":
+              bg = "bg-red-500/15";
+              text = "text-red-400";
+              break;
+            case "blue":
+              bg = "bg-blue-500/15";
+              text = "text-blue-400";
+              break;
+          }
           return (
             <span
               key={`${d.label}-${i}`}
@@ -32,11 +42,25 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
       </div>
     );
   };
-  
-  const renderItemColumn = (id: string | number, qty: number, isCompacted?: boolean) => {
+
+  const renderItemColumn = (id: string | number, qty: number, isCompacted?: boolean, enchantments?: string[]) => {
     const idString = String(id);
     const hasFailed = failedImages.has(idString);
     const imageId = idString.endsWith("_armor_trim") ? `${idString}_smithing_template` : idString;
+
+    let descriptors: Array<{ label: string, color: string }> = [];
+    if (isCompacted)
+      descriptors = [...descriptors, { label: "Compacted", color: "red" }];
+
+    console.log(enchantments);
+
+    if (enchantments)
+      for (let i = 0; i < enchantments.length; i++) {
+        descriptors = [...descriptors, ...enchantments.map(enchantment => ({
+          label: enchantment,
+          color: "blue"
+        }))]
+      }
 
     return (
       <div className="flex h-full flex-col items-center justify-center">
@@ -64,7 +88,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
           {formatItemId(idString)}
         </div>
         <div className="mt-1 w-full">
-          {renderDescriptors(isCompacted ? [{ label: "Compacted" }] : [])}
+          {renderDescriptors(descriptors)}
         </div>
       </div>
     );
@@ -94,11 +118,11 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
               )}
             </div>
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-              {renderItemColumn(event.input_item_id as any, event.input_qty as any, (event as any).compacted_input)}
+              {renderItemColumn(event.input_item_id as any, event.input_qty as any, (event as any).compacted_input, (event as any).input_enchantments)}
               <div className="flex items-center justify-center text-white/70">
                 <span className="text-lg">→</span>
               </div>
-              {renderItemColumn(event.output_item_id as any, event.output_qty as any, (event as any).compacted_output)}
+              {renderItemColumn(event.output_item_id as any, event.output_qty as any, (event as any).compacted_output, (event as any).output_enchantments)}
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-white/70">
               <span className="truncate">Exchanges: {event.exchange_possible}</span>

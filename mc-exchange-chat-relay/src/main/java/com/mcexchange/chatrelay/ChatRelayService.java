@@ -43,7 +43,8 @@ public class ChatRelayService {
             payload.hash_id = exchange.hash_id;
             payload.compacted_input = exchange.compacted_input;
             payload.compacted_output = exchange.compacted_output;
-            payload.enchantments = exchange.enchantments;
+            payload.input_enchantments = exchange.input_enchantments;
+            payload.output_enchantments = exchange.output_enchantments;
 
             String json = gson.toJson(payload);
 
@@ -100,6 +101,7 @@ public class ChatRelayService {
     public String hash_id;
     public boolean compacted_input;
     public boolean compacted_output;
-    public String[] enchantments;
+    public String[] input_enchantments;
+    public String[] output_enchantments;
   }
 }

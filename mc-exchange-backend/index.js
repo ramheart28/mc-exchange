@@ -94,6 +94,8 @@ app.post('/api/exchanges', async (req, res) => {
                 b.compacted_input = Boolean(b.compacted_input);
                 b.compacted_output = Boolean(b.compacted_output);
 
+
+
                 // validate
                 const errs = validatePayload(b);
                 if (errs.length) {
@@ -135,6 +137,12 @@ app.post('/api/exchanges', async (req, res) => {
                         shop: shop_id,
                         hash_id
                 };
+
+                if (b.input_enchantments != null && Array.isArray(b.input_enchantments) && b.input_enchantments.every(element => typeof element === 'string'))
+                        insertData.input_enchantments = b.input_enchantments;
+                if (b.output_enchantments != null && Array.isArray(b.output_enchantments) && b.output_enchantments.every(element => typeof element === 'string'))
+                        insertData.output_enchantments = b.output_enchantments;
+
 
                 console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
 

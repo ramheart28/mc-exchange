@@ -115,7 +115,9 @@ public class ExchangeParser {
     int currentInputQty = 0;
     int currentOutputQty = 0;
     String currentOutput = null;
-    Vector<String> enchantments = new Vector<>();
+    Vector<String> input_enchantments = new Vector<>();
+    Vector<String> output_enchantments = new Vector<>();
+    boolean received_output = false;
 
     for (int i = 0; i < lines.length; i++) {
       String line = lines[i].trim();
@@ -146,9 +148,11 @@ public class ExchangeParser {
           currentOutputQty = Integer.parseInt(outputMatcher.group(1));
           currentOutput = outputMatcher.group(2).trim();
         }
+        received_output = true;
+        continue;
       }
 
-      parseEnchantment(line, enchantments);
+      parseEnchantment(line, received_output ? output_enchantments : input_enchantments);
     }
 
     if (currentOutput != null) {
@@ -169,7 +173,8 @@ public class ExchangeParser {
       exchange.hash_id = generateHashId(exchange);
       exchange.compacted_input = isCompactedItem(currentInput);
       exchange.compacted_output = isCompactedItem(currentOutput);
-      exchange.enchantments = enchantments.toArray(new String[0]);
+      exchange.output_enchantments = input_enchantments.toArray(new String[0]);
+      exchange.input_enchantments = output_enchantments.toArray(new String[0]);
 
       exchanges.add(exchange);
       ChatRelayMod.LOGGER.info(
@@ -246,6 +251,7 @@ public class ExchangeParser {
     public String hash_id;
     public boolean compacted_input;
     public boolean compacted_output;
-    public String[] enchantments;
+    public String[] input_enchantments;
+    public String[] output_enchantments;
   }
 }
