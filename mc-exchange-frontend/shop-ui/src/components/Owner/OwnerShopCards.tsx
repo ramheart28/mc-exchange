@@ -2,16 +2,20 @@
 import { useState } from 'react';
 import EditAddShopButton from './EditAddShopButton';
 import { Shop } from '@/types/shop';
-import { formatBounds} from '@/app/utils/formatBounds';
+import { formatBounds } from '@/app/utils/formatBounds';
+import { supabaseBrowser } from '@/lib/supabase';
 
 interface ShopCardProps {
   shop: Shop;
   onEdit?: (shop: Shop) => void;
   onDelete?: (shopName: string) => void;
+  regionId?: string;
 }
 
-export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
+export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardProps) {
   const [imageError, setImageError] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const supabase = supabaseBrowser();
 
   // Format created date
   const formatDate = (isoString: string) => {
@@ -24,9 +28,47 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
 
   const fallbackImage = "/shop-icon.png";
   const displayImage = imageError ? fallbackImage : (shop.image || fallbackImage);
-  
-  // Get formatted bounds
-  const boundsData = formatBounds(shop.bounds);
+
+  // Format all bounds regions
+  const allBounds = Array.isArray(shop.bounds) ? shop.bounds : [];
+  const formattedBounds = allBounds.map((b: any) => formatBounds([b]));
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!regionId || !shop.id) {
+      alert("Missing region or shop id");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete "${shop.name}"?`)) return;
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert("Not authenticated");
+        setDeleting(false);
+        return;
+      }
+      const res = await fetch(`/api/regions/${regionId}/shops`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ shop_id: shop.id })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Failed to delete shop");
+      } else {
+        onDelete?.(shop.name);
+      }
+    } catch (e) {
+      alert("Failed to delete shop");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="bg-pv-surface-elevated border border-pv-border p-4 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 w-100">
@@ -48,7 +90,7 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
       </h3>
 
       {/* Shop Details */}
-      <div className="space-y-3 mb-6">        
+      <div className="space-y-3 mb-6">
         <div className="flex justify-between">
           <span className="text-pv-text-secondary text-sm">Owner:</span>
           <span className="text-pv-text-primary text-sm font-medium">{shop.owner}</span>
@@ -58,24 +100,27 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
           <span className="text-pv-text-secondary text-sm">Created:</span>
           <span className="text-pv-text-primary text-sm font-medium">{formatDate(shop.created_at)}</span>
         </div>
-        
+
         <div className="border-t border-pv-border pt-3">
-          <span className="text-pv-text-secondary text-sm block mb-2">Shop Bounds:</span>
-          
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-pv-text-secondary text-xs">Corner 1:</span>
-              <span className="text-pv-text-primary text-xs font-mono bg-pv-surface px-2 py-1 rounded">
-                {boundsData.corner1}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <span className="text-pv-text-secondary text-xs">Corner 2:</span>
-              <span className="text-pv-text-primary text-xs font-mono bg-pv-surface px-2 py-1 rounded">
-                {boundsData.corner2}
-              </span>
-            </div>
+          <span className="text-pv-text-secondary text-sm block mb-2">Shop Regions:</span>
+          <div className="space-y-4">
+            {formattedBounds.map((boundsData, idx) => (
+              <div key={idx} className="pl-2">
+                <div className="font-semibold text-pv-text-secondary mb-1">Region {idx + 1}:</div>
+                <div className="flex justify-between items-center">
+                  <span className="text-pv-text-secondary text-xs">Corner 1:</span>
+                  <span className="text-pv-text-primary text-xs font-mono bg-pv-surface px-2 py-1 rounded">
+                    {boundsData.corner1}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-pv-text-secondary text-xs">Corner 2:</span>
+                  <span className="text-pv-text-primary text-xs font-mono bg-pv-surface px-2 py-1 rounded">
+                    {boundsData.corner2}
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -87,15 +132,14 @@ export default function ShopCard({ shop, onEdit, onDelete }: ShopCardProps) {
           shopData={{
             name: shop.name,
             owner: shop.owner,
-            bounds: `${boundsData.corner1} to ${boundsData.corner2}`,
-            // Add other fields as needed for your button
+            bounds: JSON.stringify(shop.bounds),
           }}
           onClick={() => onEdit?.(shop)}
           className="flex-1"
         />
-        
+
         <button
-          onClick={() => onDelete?.(shop.name)}
+          onClick={handleDelete}
           className="
             bg-red-600 
             hover:bg-red-700 

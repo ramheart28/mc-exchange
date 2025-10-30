@@ -110,10 +110,38 @@ export async function POST(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const authorization = request.headers.get('authorization');
+    if (!authorization) {
+      return NextResponse.json(
+        { error: 'Authorization required' },
+        { status: 401 }
+      );
+    }
 
+    const body = await request.json();
 
-//POST Create region
+    const response = await axios.delete(
+      `${BACKEND_URL}/owner/regions/${id}/shops`,
+      {
+        headers: {
+          'Authorization': authorization,
+          'Content-Type': 'application/json'
+        },
+        data: body 
+      }
+    );
 
-//PATCH Edit Region
-
-//DELETE Region
+    return NextResponse.json(response.data, { status: response.status });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.response?.data?.details || error.message || 'Internal server error' },
+      { status: error.response?.status || 500 }
+    );
+  }
+}

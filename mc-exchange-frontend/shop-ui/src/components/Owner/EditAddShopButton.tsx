@@ -26,7 +26,6 @@ export default function EditAddShopButton({
 
   const handleClick = () => {
     console.log(`${mode} shop clicked`, shopData);
-    // TODO: Open modal with shopData (empty for add, filled for edit)
     onClick?.();
   };
 

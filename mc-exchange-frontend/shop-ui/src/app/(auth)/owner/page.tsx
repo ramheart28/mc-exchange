@@ -55,43 +55,43 @@ export default function OwnerHomePage() {
     fetchRegions();
   }, []);
 
-  // Fetch shops when selectedRegion changes
-  useEffect(() => {
-    const fetchShops = async () => {
-      if (!selectedRegion) {
+  // Fetch shops for the selected region
+  const refreshShops = async () => {
+    if (!selectedRegion) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError('Not authenticated');
         setShops([]);
+        setLoading(false);
         return;
       }
-      setLoading(true);
-      setError(null);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setError('Not authenticated');
-          setShops([]);
-          setLoading(false);
-          return;
+      const response = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
         }
-        const response = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
-          headers: {
-            'Authorization': `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to fetch shops');
-        }
-        const data = await response.json();
-        setShops(data.shops || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setShops([]);
-      } finally {
-        setLoading(false);
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch shops');
       }
-    };
-    fetchShops();
+      const data = await response.json();
+      setShops(data.shops || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setShops([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch shops when selectedRegion changes
+  useEffect(() => {
+    refreshShops();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRegion, supabase.auth]);
 
   // Modal handlers
@@ -159,14 +159,7 @@ export default function OwnerHomePage() {
       }
 
       // Refresh shops after add/edit
-      const shopsRes = await fetch(`/api/regions/${selectedRegion.id}/shops`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const shopsData = await shopsRes.json();
-      setShops(shopsData.shops || []);
+      await refreshShops();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -179,20 +172,26 @@ export default function OwnerHomePage() {
   // Prepare region info for OwnerTopBar
   const regionName = selectedRegion?.name || '';
   const shopCount = shops.length;
-  const lastUpdated = selectedRegion?.updated_at || '';
-  const cords = selectedRegion?.cords || '';
   const owners = selectedRegion?.owners || [];
+  const regionImg = selectedRegion?.image || "";
 
   return (
     <div className="p-3">
+      
       <div>
         <OwnerTopBar
           name={regionName}
           shopCount={shopCount}
-          lastUpdated={lastUpdated}
+          lastUpdated={selectedRegion?.lastUpdated || ""}
           bounds={selectedRegion?.bounds || []}
           owners={owners}
           onAddShop={handleAddShop}
+          regions={regions}
+          selectedRegionId={selectedRegion?.id || ""}
+          onRegionChange={regionId => {
+            const region = regions.find(r => r.id === regionId);
+            setSelectedRegion(region || null);
+          }}
         />
       </div>
 
@@ -215,7 +214,8 @@ export default function OwnerHomePage() {
                 key={shop.name || index}
                 shop={shop}
                 onEdit={handleEditShop}
-                onDelete={(shopName) => console.log('Delete shop:', shopName)}
+                onDelete={refreshShops}
+                regionId={selectedRegion?.id || ""}
               />
             ))}
           </div>
@@ -232,6 +232,7 @@ export default function OwnerHomePage() {
         regionId={selectedRegion?.id || ""}
         owner={selectedRegion?.owner || ""}
         initialShop={editingShop}
+        regionBounds={selectedRegion?.bounds || []}
       />
       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
         <p>Beacon</p>
@@ -239,9 +240,3 @@ export default function OwnerHomePage() {
     </div>
   );
 }
-
-
-// Owners Changed to be readale
-// Owner Banner a lot smaller
-// last updated? -> remove
-// Add Region Img

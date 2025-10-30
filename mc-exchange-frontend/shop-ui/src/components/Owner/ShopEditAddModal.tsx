@@ -2,14 +2,71 @@ import React, { useState, useEffect } from "react";
 import { Shop } from "@/types/shop";
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
+// Helper: parse a single bound (string or object) to object with numbers
+function parseBounds(bound: any) {
+  if (typeof bound === 'string') {
+    const coords = bound.slice(1, -1).split(',').map(Number);
+    return {
+      min_x: coords[0],
+      min_y: coords[1],
+      min_z: coords[2],
+      max_x: coords[3],
+      max_y: coords[4],
+      max_z: coords[5]
+    };
+  }
+  // If already an object, ensure all are numbers
+  return {
+    min_x: Number(bound.min_x),
+    min_y: Number(bound.min_y),
+    min_z: Number(bound.min_z),
+    max_x: Number(bound.max_x),
+    max_y: Number(bound.max_y),
+    max_z: Number(bound.max_z)
+  };
+}
+
+// Helper: check if shop bounds are within region bounds
+function isBoundsInsideRegion(shopBounds: any, regionBounds: any) {
+  const shop = parseBounds(shopBounds);
+  const region = parseBounds(regionBounds);
+  return (
+    shop.min_x >= region.min_x &&
+    shop.max_x <= region.max_x &&
+    shop.min_y >= region.min_y &&
+    shop.max_y <= region.max_y &&
+    shop.min_z >= region.min_z &&
+    shop.max_z <= region.max_z
+  );
+}
+
 interface ShopEditAddModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (shop: Partial<Shop>) => void;
   regionId: string;
   owner: string;
-  initialShop?: Shop | null; // If present, modal is "edit" mode
+  initialShop?: Shop | null;
+  regionBounds: any[];
 }
+
+type BoundsObj = {
+  min_x: string;
+  min_y: string;
+  min_z: string;
+  max_x: string;
+  max_y: string;
+  max_z: string;
+};
+
+const emptyBounds: BoundsObj = {
+  min_x: "",
+  min_y: "",
+  min_z: "",
+  max_x: "",
+  max_y: "",
+  max_z: "",
+};
 
 export default function ShopEditAddModal({
   open,
@@ -18,17 +75,25 @@ export default function ShopEditAddModal({
   regionId,
   owner: initialOwner,
   initialShop,
+  regionBounds,
 }: ShopEditAddModalProps) {
   const isEdit = !!initialShop;
 
   const [name, setName] = useState(initialShop?.name || "");
   const [dimension, setDimension] = useState(initialShop?.dimension || "overworld");
-  const [minX, setMinX] = useState(initialShop?.bounds?.[0]?.min_x ?? "");
-  const [minY, setMinY] = useState(initialShop?.bounds?.[0]?.min_y ?? "");
-  const [minZ, setMinZ] = useState(initialShop?.bounds?.[0]?.min_z ?? "");
-  const [maxX, setMaxX] = useState(initialShop?.bounds?.[0]?.max_x ?? "");
-  const [maxY, setMaxY] = useState(initialShop?.bounds?.[0]?.max_y ?? "");
-  const [maxZ, setMaxZ] = useState(initialShop?.bounds?.[0]?.max_z ?? "");
+  const [bounds, setBounds] = useState<BoundsObj[]>(
+    initialShop?.bounds?.length
+      ? initialShop.bounds.map(b => ({
+          min_x: b.min_x?.toString() ?? "",
+          min_y: b.min_y?.toString() ?? "",
+          min_z: b.min_z?.toString() ?? "",
+          max_x: b.max_x?.toString() ?? "",
+          max_y: b.max_y?.toString() ?? "",
+          max_z: b.max_z?.toString() ?? "",
+        }))
+      : [{ ...emptyBounds }]
+  );
+  const [image, setImage] = useState(initialShop?.image || "");
   const [owner, setOwner] = useState(initialShop?.owner || initialOwner || "");
   const [error, setError] = useState<string | null>(null);
 
@@ -36,25 +101,42 @@ export default function ShopEditAddModal({
     if (initialShop) {
       setName(initialShop.name || "");
       setDimension(initialShop.dimension || "overworld");
-      setMinX(initialShop.bounds?.[0]?.min_x ?? "");
-      setMinY(initialShop.bounds?.[0]?.min_y ?? "");
-      setMinZ(initialShop.bounds?.[0]?.min_z ?? "");
-      setMaxX(initialShop.bounds?.[0]?.max_x ?? "");
-      setMaxY(initialShop.bounds?.[0]?.max_y ?? "");
-      setMaxZ(initialShop.bounds?.[0]?.max_z ?? "");
+      setBounds(
+        initialShop.bounds?.length
+          ? initialShop.bounds.map(b => ({
+              min_x: b.min_x?.toString() ?? "",
+              min_y: b.min_y?.toString() ?? "",
+              min_z: b.min_z?.toString() ?? "",
+              max_x: b.max_x?.toString() ?? "",
+              max_y: b.max_y?.toString() ?? "",
+              max_z: b.max_z?.toString() ?? "",
+            }))
+          : [{ ...emptyBounds }]
+      );
+      setImage(initialShop.image || "");
       setOwner(initialShop.owner || initialOwner || "");
     } else if (open) {
       setName("");
       setDimension("overworld");
-      setMinX("");
-      setMinY("");
-      setMinZ("");
-      setMaxX("");
-      setMaxY("");
-      setMaxZ("");
+      setBounds([{ ...emptyBounds }]);
+      setImage("");
       setOwner(initialOwner || "");
     }
   }, [initialShop, open, initialOwner]);
+
+  const handleBoundsChange = (idx: number, field: keyof BoundsObj, value: string) => {
+    setBounds(prev =>
+      prev.map((b, i) => (i === idx ? { ...b, [field]: value } : b))
+    );
+  };
+
+  const handleAddRegion = () => {
+    setBounds(prev => [...prev, { ...emptyBounds }]);
+  };
+
+  const handleRemoveRegion = (idx: number) => {
+    setBounds(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,31 +144,47 @@ export default function ShopEditAddModal({
 
     if (!name.trim()) return setError("Shop name is required.");
     if (!owner.trim()) return setError("Owner is required.");
-    if (!isEdit && [minX, minY, minZ, maxX, maxY, maxZ].some((v) => v === "")) {
-      return setError("All bounds are required.");
+    if (
+      bounds.some(b =>
+        [b.min_x, b.min_y, b.min_z, b.max_x, b.max_y, b.max_z].some(v => v === "")
+      )
+    ) {
+      return setError("All bounds fields are required for each region.");
     }
 
-    // Parse all values as numbers
-    const x1 = Number(minX), x2 = Number(maxX);
-    const y1 = Number(minY), y2 = Number(maxY);
-    const z1 = Number(minZ), z2 = Number(maxZ);
+    // Parse all values as numbers and always assign min/max correctly
+    const boundsArr = bounds.map(b => {
+      const x1 = Number(b.min_x), x2 = Number(b.max_x);
+      const y1 = Number(b.min_y), y2 = Number(b.max_y);
+      const z1 = Number(b.min_z), z2 = Number(b.max_z);
+      return {
+        min_x: Math.min(x1, x2),
+        max_x: Math.max(x1, x2),
+        min_y: Math.min(y1, y2),
+        max_y: Math.max(y1, y2),
+        min_z: Math.min(z1, z2),
+        max_z: Math.max(z1, z2),
+      };
+    });
 
-    // Always assign min/max correctly
-    const boundsObj = {
-      min_x: Math.min(x1, x2),
-      max_x: Math.max(x1, x2),
-      min_y: Math.min(y1, y2),
-      max_y: Math.max(y1, y2),
-      min_z: Math.min(z1, z2),
-      max_z: Math.max(z1, z2),
-    };
+    // Validate bounds inside region
+    if (regionBounds.length > 0) {
+      const region = parseBounds(regionBounds[0]);
+      for (const b of boundsArr) {
+        if (!isBoundsInsideRegion(b, region)) {
+          setError("Bounds are outside of the region area.");
+          return; // Do not close modal
+        }
+      }
+    }
 
     const shopData: Partial<Shop> = {
       ...(isEdit && initialShop?.id ? { id: initialShop.id } : {}),
       name,
       owner,
       dimension,
-      bounds: isEdit ? initialShop?.bounds : [boundsObj],
+      bounds: boundsArr,
+      image,
     };
 
     onSubmit(shopData);
@@ -131,61 +229,101 @@ export default function ShopEditAddModal({
               required
             />
           </div>
-          {!isEdit && (
-            <div>
-              <label className="block text-sm font-medium mb-1">Bounds</label>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Min X"
-                  value={minX}
-                  onChange={e => setMinX(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Max X"
-                  value={maxX}
-                  onChange={e => setMaxX(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Min Y"
-                  value={minY}
-                  onChange={e => setMinY(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Max Y"
-                  value={maxY}
-                  onChange={e => setMaxY(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Min Z"
-                  value={minZ}
-                  onChange={e => setMinZ(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
-                />
-                <input
-                  type="number"
-                  placeholder="Max Z"
-                  value={maxZ}
-                  onChange={e => setMaxZ(e.target.value)}
-                  className="border rounded px-2 py-1"
-                  required
+          <div>
+            <label className="block text-sm font-medium mb-1">Image Link (Optional)</label>
+            <input
+              type="url"
+              value={image}
+              onChange={e => setImage(e.target.value)}
+              className="w-full border rounded px-2 py-1"
+              placeholder="https://example.com/image.png"
+              pattern="https?://.+"
+            />
+            {image && (
+              <div className="mt-2 flex justify-center">
+                <img
+                  src={image}
+                  alt="Shop preview"
+                  className="w-20 h-20 object-cover rounded border border-pv-border"
+                  onError={e => (e.currentTarget.style.display = 'none')}
                 />
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Bounds Regions</label>
+            {bounds.map((b, idx) => (
+              <div key={idx} className="mb-2 border border-pv-border rounded p-2 relative">
+                {bounds.length > 1 && (
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 text-red-400 hover:text-red-600"
+                    onClick={() => handleRemoveRegion(idx)}
+                    title="Remove region"
+                  >
+                    &times;
+                  </button>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="Min X"
+                    value={b.min_x}
+                    onChange={e => handleBoundsChange(idx, "min_x", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max X"
+                    value={b.max_x}
+                    onChange={e => handleBoundsChange(idx, "max_x", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Min Y"
+                    value={b.min_y}
+                    onChange={e => handleBoundsChange(idx, "min_y", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max Y"
+                    value={b.max_y}
+                    onChange={e => handleBoundsChange(idx, "max_y", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Min Z"
+                    value={b.min_z}
+                    onChange={e => handleBoundsChange(idx, "min_z", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max Z"
+                    value={b.max_z}
+                    onChange={e => handleBoundsChange(idx, "max_z", e.target.value)}
+                    className="border rounded px-2 py-1"
+                    required
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              className="mt-2 px-3 py-1 rounded bg-pv-border border border-pv-accent-border text-white hover:bg-pv-primary-dark"
+              onClick={handleAddRegion}
+            >
+              + Region
+            </button>
+          </div>
           {error && <p className="text-red-600 text-sm">{error}</p>}
           <div className="flex justify-end gap-2 mt-4">
             <button type="submit" className="px-4 py-2 rounded-lg bg-pv-border border border-pv-accent-border text-white hover:bg-pv-primary-dark">
