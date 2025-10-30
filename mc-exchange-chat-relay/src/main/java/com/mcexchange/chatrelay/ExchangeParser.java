@@ -101,7 +101,7 @@ public class ExchangeParser {
 
     // Check if the extracted name is a valid enchantment
     if (ENCHANTMENT_LIST.contains(enchantmentName)) {
-      enchantments.add(line);
+      enchantments.add(new String(line));
     }
   }
 
@@ -112,9 +112,11 @@ public class ExchangeParser {
 
     int exchangesAvailable = 0;
     String currentInput = null;
+    String currentInputCustom = null;
     int currentInputQty = 0;
     int currentOutputQty = 0;
     String currentOutput = null;
+    String currentOutputCustom = null;
     Vector<String> input_enchantments = new Vector<>();
     Vector<String> output_enchantments = new Vector<>();
     boolean received_output = false;
@@ -131,27 +133,32 @@ public class ExchangeParser {
 
       // Parse input line: "Input: 1 Diamond"
       if (line.startsWith("Input:")) {
-        Pattern inputPattern = Pattern.compile("Input: (\\d+) (.+)");
+        Pattern inputPattern = Pattern.compile("Input: (\\d+)\\s+(.*?)\\s*(?:\"([^\"]+)\")?$");
         Matcher inputMatcher = inputPattern.matcher(line);
         if (inputMatcher.find()) {
           currentInputQty = Integer.parseInt(inputMatcher.group(1));
           currentInput = inputMatcher.group(2).trim();
+          String custom = inputMatcher.group(3);
+          if (custom != null) currentInputCustom = custom.trim();
         }
         continue;
       }
 
       // Parse output line: "Output: 2 Sand"
       if (line.startsWith("Output:") && currentInput != null) {
-        Pattern outputPattern = Pattern.compile("Output: (\\d+) (.+)");
+        Pattern outputPattern = Pattern.compile("Output: (\\d+)\\s+(.*?)\\s*(?:\"([^\"]+)\")?$");
         Matcher outputMatcher = outputPattern.matcher(line);
         if (outputMatcher.find()) {
           currentOutputQty = Integer.parseInt(outputMatcher.group(1));
           currentOutput = outputMatcher.group(2).trim();
+          String custom = outputMatcher.group(3);
+          if (custom != null) currentOutputCustom = custom.trim();
         }
         received_output = true;
         continue;
       }
 
+      System.out.println(line);
       parseEnchantment(line, received_output ? output_enchantments : input_enchantments);
     }
 
@@ -173,8 +180,8 @@ public class ExchangeParser {
       exchange.hash_id = generateHashId(exchange);
       exchange.compacted_input = isCompactedItem(currentInput);
       exchange.compacted_output = isCompactedItem(currentOutput);
-      exchange.output_enchantments = input_enchantments.toArray(new String[0]);
-      exchange.input_enchantments = output_enchantments.toArray(new String[0]);
+      exchange.output_enchantments = output_enchantments.toArray(new String[0]);
+      exchange.input_enchantments = input_enchantments.toArray(new String[0]);
 
       exchanges.add(exchange);
       ChatRelayMod.LOGGER.info(
@@ -243,8 +250,10 @@ public class ExchangeParser {
     public int x, y, z;
     public String loc_src;
     public String input_item_id;
+    public String input_item_name;
     public int input_qty;
     public String output_item_id;
+    public String output_item_name;
     public int output_qty;
     public int exchange_possible;
     public String raw;

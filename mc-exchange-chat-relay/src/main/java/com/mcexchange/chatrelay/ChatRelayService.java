@@ -35,8 +35,10 @@ public class ChatRelayService {
             payload.z = exchange.z;
             payload.loc_src = exchange.loc_src;
             payload.input_item_id = exchange.input_item_id;
+            payload.input_item_name = exchange.input_item_id;
             payload.input_qty = exchange.input_qty;
             payload.output_item_id = exchange.output_item_id;
+            payload.output_item_name = exchange.input_item_id;
             payload.output_qty = exchange.output_qty;
             payload.exchange_possible = exchange.exchange_possible;
             payload.raw = exchange.raw;
@@ -93,8 +95,10 @@ public class ChatRelayService {
     public int x, y, z;
     public String loc_src;
     public String input_item_id;
+    public String input_item_name;
     public int input_qty;
     public String output_item_id;
+    public String output_item_name;
     public int output_qty;
     public int exchange_possible;
     public String raw;

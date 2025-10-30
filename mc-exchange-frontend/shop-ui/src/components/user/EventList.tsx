@@ -43,10 +43,20 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
     );
   };
 
+  const mapToImageId = (idString: String) => {
+    let out = idString;
+    if (idString.endsWith("_armor_trim"))
+      out = `${out}_smithing_template`;
+    else if (idString === "eye_of_ender")
+      out = "ender_eye";
+
+    return out;
+  }
+
   const renderItemColumn = (id: string | number, qty: number, isCompacted?: boolean, enchantments?: string[]) => {
     const idString = String(id);
     const hasFailed = failedImages.has(idString);
-    const imageId = idString.endsWith("_armor_trim") ? `${idString}_smithing_template` : idString;
+    const imageId = mapToImageId(idString);
 
     let descriptors: Array<{ label: string, color: string }> = [];
     if (isCompacted)
