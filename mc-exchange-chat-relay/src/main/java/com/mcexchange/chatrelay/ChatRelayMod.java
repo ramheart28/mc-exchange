@@ -69,10 +69,12 @@ public class ChatRelayMod implements ClientModInitializer {
 
     // If we're collecting an exchange message, continue collecting
     if (inExchangeMessage) {
+      LOGGER.info("shits not showing LOL!\n{}", messageText);
       exchangeBuilder.append(messageText).append("\n");
 
       // Check if this message completes the exchange (ends with "exchanges available")
-      if (messageText.contains("exchanges available")) {
+      if (messageText.contains("exchange available")
+          || messageText.contains("exchanges available")) {
         String completeMessage = exchangeBuilder.toString().trim();
         LOGGER.info("📦 Complete exchange message collected:\n{}", completeMessage);
 
@@ -98,4 +100,3 @@ public class ChatRelayMod implements ClientModInitializer {
     }
   }
 }
-

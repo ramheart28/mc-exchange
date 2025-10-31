@@ -34,6 +34,7 @@ public class ChatRelayService {
             payload.y = exchange.y;
             payload.z = exchange.z;
             payload.loc_src = exchange.loc_src;
+            payload.exchange_present = exchange.exchange_present;
             payload.input_item_id = exchange.input_item_id;
             payload.input_item_name = exchange.input_item_id;
             payload.input_qty = exchange.input_qty;
@@ -97,6 +98,7 @@ public class ChatRelayService {
     public String input_item_id;
     public String input_item_name;
     public int input_qty;
+    public int exchange_present;
     public String output_item_id;
     public String output_item_name;
     public int output_qty;
