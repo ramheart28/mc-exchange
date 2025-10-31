@@ -75,6 +75,41 @@ router.get("/exchanges/shop", async (req, res) => {
   return res.status(200).json({ ok: true, data: data || [] });
 });
 
+router.get("/exchanges", async (req, res) => {
+  const shopId = req.query.shop;
+
+  let searchOutput = req.query.search_output;
+
+  const regionId = req.query.region;
+
+  if (!regionId)
+    return res.status(400).json({ error: "Missing region" });
+
+
+  if (!shopId && !searchOutput)
+    return res.status(400).json({ error: "Missing shop id and search output" });
+
+
+  let query = supabase
+    .from("exchanges")
+    .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop!inner(*), input_enchantments, output_enchantments").eq('shop.region', regionId);
+  if (shopId)
+    query = query.eq('shop.id', shopId);
+  if (searchOutput) {
+    searchOutput = '%' + searchOutput + '%';
+    query = query.ilike('output_item_id', searchOutput);
+  }
+
+  const { data, error } = await query
+    .order("ts", { ascending: false })
+    .limit(200);
+
+  if (error) return res.status(500).send(error.message);
+
+  return res.status(200).json({ ok: true, data: data || [] });
+});
+
+
 function validateGetUserPayload(p) {
   const errors = [];
   const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
