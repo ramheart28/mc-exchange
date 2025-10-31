@@ -106,13 +106,14 @@ router.post("/regions", protectRoute, adminProtectRoute, async (req, res) => {
 function validatePatchRegionPayload(p) {
   const errors = [];
   const optStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
-  const optArr = (v, k) => (Array.isArray(v) && v.length > 0 ? null : `${k} required`);
+  const optArr = (v, k) => (Array.isArray(v) ? null : `${k} must be array`);
   const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
   // required fields
   [['name', optStr], ['slug', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
+
   const ownersErr = optArr(p['owners'], 'owners');
   if (ownersErr) errors.push(ownersErr);
 

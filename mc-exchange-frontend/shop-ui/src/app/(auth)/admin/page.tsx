@@ -85,6 +85,7 @@ export default function AdminPage() {
       headers,
       body: JSON.stringify({
         ...newRegion,
+        owners: [newRegion.owner],
         bounds: [boundsObj],
       }),
     });
@@ -126,17 +127,17 @@ export default function AdminPage() {
     // Debug logs
     console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
     console.log("PATCH body:", JSON.stringify({
-  name: region.name,
-  slug: region.slug,
-  dimension: region.dimension,
-  owners: updatedOwners,
-  bounds: region.bounds,
-}));
+      name: region.name,
+      slug: region.slug,
+      dimension: region.dimension,
+      owners: updatedOwners,
+      bounds: region.bounds,
+    }));
 
     await fetch(`/api/admin/regions/${region.id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         name: region.name,
         slug: region.slug,
         dimension: region.dimension,
@@ -171,14 +172,17 @@ export default function AdminPage() {
     const ownersArr = Array.isArray(region.owners) ? region.owners : [];
     const updatedOwners = ownersArr.filter(id => id !== userId);
 
-    // Debug logs
-    console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
-    console.log("PATCH body:", JSON.stringify({ owners: updatedOwners }));
-
+    // PATCH must send all required fields!
     await fetch(`/api/admin/regions/${region.id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ owners: updatedOwners }),
+      body: JSON.stringify({
+        name: region.name,
+        slug: region.slug,
+        dimension: region.dimension,
+        owners: updatedOwners,
+        bounds: region.bounds,
+      }),
     });
     setConfirmRemove(null);
     // Refresh regions
@@ -208,18 +212,24 @@ export default function AdminPage() {
 
     // Debug logs
     console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
-    console.log("PATCH body:", JSON.stringify({ owners: updatedOwners }));
+    console.log("PATCH body:", JSON.stringify({
+      name: region.name,
+      slug: region.slug,
+      dimension: region.dimension,
+      owners: updatedOwners,
+      bounds: region.bounds,
+    }));
 
     await fetch(`/api/admin/regions/${region.id}`, {
       method: "PATCH",
       headers,
       body: JSON.stringify({
-         name: region.name,
-         slug: region.slug,
-         dimension: region.dimension,
-         bounds: region.bounds,
-         owners: updatedOwners,
-        }),
+        name: region.name,
+        slug: region.slug,
+        dimension: region.dimension,
+        bounds: region.bounds,
+        owners: updatedOwners,
+      }),
     });
     // Refresh regions
     const regionsRes = await fetch("/api/admin/regions", { headers });
