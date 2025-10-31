@@ -5,9 +5,10 @@ import { supabaseBrowser } from '@/lib/supabase';
 interface Region {
   id: string;
   name: string;
-  owners: string[];
-  bounds: any[]; // Now an array of bounds objects
+  owners: string[] | null;
+  bounds: any[];
   dimension: string;
+  slug: string;
 }
 
 interface User {
@@ -28,6 +29,7 @@ export default function AdminPage() {
   const [maxX, setMaxX] = useState("");
   const [maxY, setMaxY] = useState("");
   const [maxZ, setMaxZ] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState<{ regionId: string, userId: string } | null>(null);
   const supabase = supabaseBrowser();
 
   // Fetch regions and users
@@ -44,11 +46,17 @@ export default function AdminPage() {
       ]);
       const regionsJson = await regionsRes.json();
       const usersJson = await usersRes.json();
-      setRegions(regionsJson.data || regionsJson.regions || []);
+      // Ensure owners is always an array
+      const safeRegions = (regionsJson.data || regionsJson.regions || []).map((r: Region) => ({
+        ...r,
+        owners: Array.isArray(r.owners) ? r.owners : [],
+      }));
+      setRegions(safeRegions);
       setUsers(usersJson.data || usersJson.users || []);
       setLoading(false);
     }
     fetchData();
+    // eslint-disable-next-line
   }, []);
 
   // Create region handler
@@ -59,7 +67,6 @@ export default function AdminPage() {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    // Parse all values as numbers and always assign min/max correctly
     const x1 = Number(minX), x2 = Number(maxX);
     const y1 = Number(minY), y2 = Number(maxY);
     const z1 = Number(minZ), z2 = Number(maxZ);
@@ -88,7 +95,12 @@ export default function AdminPage() {
     const refreshHeaders: Record<string, string> = {};
     if (token) refreshHeaders['Authorization'] = `Bearer ${token}`;
     const regionsRes = await fetch("/api/admin/regions", { headers: refreshHeaders });
-    setRegions((await regionsRes.json()).data || []);
+    const regionsJson = await regionsRes.json();
+    const safeRegions = (regionsJson.data || regionsJson.regions || []).map((r: Region) => ({
+      ...r,
+      owners: Array.isArray(r.owners) ? r.owners : [],
+    }));
+    setRegions(safeRegions);
   }
 
   // Delete region handler
@@ -98,21 +110,125 @@ export default function AdminPage() {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
     await fetch(`/api/admin/regions/${id}`, { method: "DELETE", headers });
-    setRegions(regions.filter(r => r.id !== id));
+    setRegions(regions.filter(region => region.id !== id));
   }
 
-  // Assign user as owner to region
+  // Assign user as owner to region (add to region.owners)
+  async function handleAssignOwnerToRegion(userId: string, region: Region) {
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const ownersArr = Array.isArray(region.owners) ? region.owners : [];
+    if (ownersArr.includes(userId)) return;
+    const updatedOwners = [...ownersArr, userId];
+
+    // Debug logs
+    console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
+    console.log("PATCH body:", JSON.stringify({
+  name: region.name,
+  slug: region.slug,
+  dimension: region.dimension,
+  owners: updatedOwners,
+  bounds: region.bounds,
+}));
+
+    await fetch(`/api/admin/regions/${region.id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ 
+        name: region.name,
+        slug: region.slug,
+        dimension: region.dimension,
+        owners: updatedOwners,
+        bounds: region.bounds,
+      }),
+    });
+    // Refresh regions
+    const regionsRes = await fetch("/api/admin/regions", { headers });
+    const regionsJson = await regionsRes.json();
+    const safeRegions = (regionsJson.data || regionsJson.regions || []).map((r: Region) => ({
+      ...r,
+      owners: Array.isArray(r.owners) ? r.owners : [],
+    }));
+    setRegions(safeRegions);
+  }
+
+  // Remove owner from region (after confirmation)
+  async function handleRemoveOwnerFromRegion(region: Region, userId: string) {
+    setConfirmRemove({ regionId: region.id, userId });
+  }
+
+  async function confirmRemoveOwner() {
+    if (!confirmRemove) return;
+    const { regionId, userId } = confirmRemove;
+    const { data } = await supabase.auth.getSession();
+    const token = data?.session?.access_token;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const region = regions.find(r => r.id === regionId);
+    if (!region) return;
+    const ownersArr = Array.isArray(region.owners) ? region.owners : [];
+    const updatedOwners = ownersArr.filter(id => id !== userId);
+
+    // Debug logs
+    console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
+    console.log("PATCH body:", JSON.stringify({ owners: updatedOwners }));
+
+    await fetch(`/api/admin/regions/${region.id}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ owners: updatedOwners }),
+    });
+    setConfirmRemove(null);
+    // Refresh regions
+    const regionsRes = await fetch("/api/admin/regions", { headers });
+    const regionsJson = await regionsRes.json();
+    const safeRegions = (regionsJson.data || regionsJson.regions || []).map((r: Region) => ({
+      ...r,
+      owners: Array.isArray(r.owners) ? r.owners : [],
+    }));
+    setRegions(safeRegions);
+  }
+
+  function getUserEmail(userId: string) {
+    return users.find(u => u.id === userId)?.email || userId;
+  }
+
   async function handleAssignRegion(userId: string, regionId: string) {
     const { data } = await supabase.auth.getSession();
     const token = data?.session?.access_token;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    await fetch(`/api/admin/users/${userId}`, {
+    const region = regions.find(r => r.id === regionId);
+    if (!region) return;
+    const ownersArr = Array.isArray(region.owners) ? region.owners : [];
+    if (ownersArr.includes(userId)) return; // Already an owner
+    const updatedOwners = [...ownersArr, userId];
+
+    // Debug logs
+    console.log("PATCH owners:", updatedOwners, typeof updatedOwners, Array.isArray(updatedOwners));
+    console.log("PATCH body:", JSON.stringify({ owners: updatedOwners }));
+
+    await fetch(`/api/admin/regions/${region.id}`, {
       method: "PATCH",
       headers,
-      body: JSON.stringify({ regions: [regionId], role: "owner" }),
+      body: JSON.stringify({
+         name: region.name,
+         slug: region.slug,
+         dimension: region.dimension,
+         bounds: region.bounds,
+         owners: updatedOwners,
+        }),
     });
-    // Optionally refresh users
+    // Refresh regions
+    const regionsRes = await fetch("/api/admin/regions", { headers });
+    const regionsJson = await regionsRes.json();
+    const safeRegions = (regionsJson.data || regionsJson.regions || []).map((r: Region) => ({
+      ...r,
+      owners: Array.isArray(r.owners) ? r.owners : [],
+    }));
+    setRegions(safeRegions);
   }
 
   return (
@@ -221,6 +337,32 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Confirm Remove Owner Modal */}
+      {confirmRemove && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50">
+          <div className="bg-gray-800 p-6 rounded shadow-md max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4">Remove Owner</h3>
+            <p>
+              Are you sure you want to remove <span className="font-bold">{getUserEmail(confirmRemove.userId)}</span> from this region?
+            </p>
+            <div className="flex gap-2 mt-6 justify-end">
+              <button
+                className="bg-gray-700 px-4 py-2 rounded"
+                onClick={() => setConfirmRemove(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white"
+                onClick={confirmRemoveOwner}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Regions List */}
       <div className="max-w-3xl mx-auto mt-8">
         <h2 className="text-lg font-semibold mb-4">Regions</h2>
@@ -232,12 +374,50 @@ export default function AdminPage() {
               <div key={region.id} className="bg-gray-800 rounded p-4 flex flex-col md:flex-row md:items-center md:justify-between">
                 <div>
                   <div className="font-bold">{region.name}</div>
-                  <div className="text-sm text-gray-400">Owners: {region.owners?.join(", ") || "None"}</div>
+                  <div className="flex flex-wrap gap-2 my-2">
+                    {region.owners && region.owners.length > 0 ? (
+                      region.owners.map(ownerId => (
+                        <span
+                          key={ownerId}
+                          className="flex items-center bg-blue-700 text-white rounded-full px-3 py-1 text-xs font-semibold cursor-pointer hover:bg-blue-800 transition relative group"
+                        >
+                          {getUserEmail(ownerId)}
+                          <button
+                            className="ml-2 text-white bg-blue-900 rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                            title="Remove owner"
+                            onClick={() => handleRemoveOwnerFromRegion(region, ownerId)}
+                            type="button"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400 text-xs">No owners</span>
+                    )}
+                  </div>
                   <div className="text-sm text-gray-400">Dimension: {region.dimension}</div>
                   <div className="text-sm text-gray-400">
                     Bounds: {region.bounds && region.bounds.length > 0
                       ? `(${region.bounds[0].min_x},${region.bounds[0].min_y},${region.bounds[0].min_z}) → (${region.bounds[0].max_x},${region.bounds[0].max_y},${region.bounds[0].max_z})`
                       : "None"}
+                  </div>
+                  {/* Assign owner dropdown */}
+                  <div className="mt-2">
+                    <select
+                      className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white"
+                      defaultValue=""
+                      onChange={e => {
+                        if (e.target.value) handleAssignOwnerToRegion(e.target.value, region);
+                      }}
+                    >
+                      <option value="" disabled>Add owner to region...</option>
+                      {users
+                        .filter(u => !(Array.isArray(region.owners) ? region.owners : []).includes(u.id))
+                        .map(user => (
+                          <option key={user.id} value={user.id}>{user.email}</option>
+                        ))}
+                    </select>
                   </div>
                 </div>
                 <button

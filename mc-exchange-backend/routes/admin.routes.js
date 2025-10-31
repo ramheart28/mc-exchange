@@ -105,25 +105,25 @@ router.post("/regions", protectRoute, adminProtectRoute, async (req, res) => {
 
 function validatePatchRegionPayload(p) {
   const errors = [];
-  const optStr = (v, k) => (!v || (typeof v === 'string' && v.trim()) ? null : `${k} required`);
+  const optStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
+  const optArr = (v, k) => (Array.isArray(v) && v.length > 0 ? null : `${k} required`);
   const optInt = (v, k) => (Number.isInteger(v) ? null : `${k} must be integer`);
 
-  // required feilds
-  [['name', optStr], ['slug', optStr], ['owners', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
+  // required fields
+  [['name', optStr], ['slug', optStr], ['dimension', optStr]].forEach(([k, fn]) => {
     const e = fn(p[k], k); if (e) errors.push(e);
   });
+  const ownersErr = optArr(p['owners'], 'owners');
+  if (ownersErr) errors.push(ownersErr);
 
   if (!p['bounds'])
     return errors;
 
-  p.bounds = JSON.parse(p['bounds']);
-
   if (Array.isArray(p['bounds'])) {
     let bounds = p['bounds'];
-
     for (let i = 0; i < bounds.length; i++) {
       // numeric coords 
-      ;['min_x', 'min_y', 'min_z',
+      ['min_x', 'min_y', 'min_z',
         'max_x', 'max_y', 'max_z'].forEach(k => {
           if (bounds[i][k] !== undefined) {
             const e = optInt(bounds[i][k], k); if (e) errors.push(e);
