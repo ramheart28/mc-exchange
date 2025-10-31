@@ -5,11 +5,26 @@ import { adminProtectRoute, protectRoute } from "../middleware/authMiddleWare.js
 const router = express.Router();
 
 // Download all shop events as JSON
-router.get("/all", protectRoute, adminProtectRoute, async (req, res) => {
-  const { data, error } = await supabase
+router.get("/exchanges", protectRoute, adminProtectRoute, async (req, res) => {
+  const shopId = req.query.shop;
+
+  let searchOutput = req.query.search_output;
+
+  const regionId = req.query.region;
+
+  let query = supabase
     .from("exchanges")
-    .select("*")
-    .order("ts", { ascending: false });
+    .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop!inner(*), input_enchantments, output_enchantments");
+
+  if (shopId)
+    query = query.eq('shop.id', shopId);
+
+  if (searchOutput) {
+    searchOutput = '%' + searchOutput + '%';
+    query = query.ilike('output_item_id', searchOutput);
+  }
+
+  if (regionId) query = query.eq('shop.region', regionId)
 
   if (error) return res.status(500).send(error.message);
 
