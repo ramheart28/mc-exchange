@@ -7,9 +7,7 @@ const router = express.Router();
 // Download all shop events as JSON
 router.get("/exchanges", protectRoute, adminProtectRoute, async (req, res) => {
   const shopId = req.query.shop;
-
   let searchOutput = req.query.search_output;
-
   const regionId = req.query.region;
 
   let query = supabase
@@ -24,7 +22,9 @@ router.get("/exchanges", protectRoute, adminProtectRoute, async (req, res) => {
     query = query.ilike('output_item_id', searchOutput);
   }
 
-  if (regionId) query = query.eq('shop.region', regionId)
+  if (regionId) query = query.eq('shop.region', regionId);
+
+  const { data, error } = await query;
 
   if (error) return res.status(500).send(error.message);
 
