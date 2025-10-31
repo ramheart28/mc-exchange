@@ -7,7 +7,7 @@ const router = express.Router();
 // Download all shop events as JSON
 router.get("/all", protectRoute, adminProtectRoute, async (req, res) => {
   const { data, error } = await supabase
-    .from("shop_events")
+    .from("exchanges")
     .select("*")
     .order("ts", { ascending: false });
 
@@ -198,7 +198,7 @@ async function getHalfDayCount() {
   date.setHours(date.getHours() - 12);
   var half_day_ts = date.toISOString();
   const { data, error } = await supabase
-    .from("shop_events")
+    .from("exchanges")
     .select(
       "ts"
     )
@@ -210,7 +210,7 @@ async function getHalfDayCount() {
 
 async function getTotal() {
   const { data, error } = await supabase
-    .from("shop_events")
+    .from("exchanges")
     .select(
       "*"
     );

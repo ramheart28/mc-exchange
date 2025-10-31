@@ -23,6 +23,7 @@ router.post("/name", protectRoute, async (req, res) => {
       console.log('No auth provided');
       return res.status(401).json({ error: 'bad_request', details: 'No auth provided' });
     }
+
     var b = req.body || {};
 
     validatePayload(b);

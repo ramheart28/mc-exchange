@@ -65,7 +65,7 @@ router.get("/exchanges/shop", async (req, res) => {
   }
 
   const { data, error } = await supabase
-    .from("shop_events")
+    .from("exchanges")
     .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop, input_enchantments, output_enchantments")
     .eq('shop', shopId)
     .order("ts", { ascending: false });

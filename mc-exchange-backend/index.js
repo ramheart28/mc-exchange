@@ -17,7 +17,7 @@ function validatePayload(p) {
         const needStr = (v, k) => (typeof v === 'string' && v.trim() ? null : `${k} required`);
 
         // required fields
-        [['player', needStr], ['raw', needStr], ['dimension', needStr]].forEach(([k, fn]) => {
+        [['player', needStr], ['raw', needStr], ['dimension', needStr], ['exchange_present', needInt]].forEach(([k, fn]) => {
                 const e = fn(p[k], k); if (e) errors.push(e);
         });
 
@@ -43,10 +43,8 @@ function validatePayload(p) {
         return errors;
 }
 
-function makeBlockHash(player, raw) {
-        // dedupe by player + epoch minute + exact block text
-        const minute = Math.floor(Date.now() / 60000);
-        return crypto.createHash('sha1').update(`${player}|${minute}|${raw}`).digest('hex');
+function makeBlockHash(x, y, z, dimension, exchange_present) {
+        return crypto.createHash('sha1').update(`${x}|${y}|${z}|${dimension}|${exchange_present}`).digest('hex');
 }
 
 const app = express();
@@ -115,7 +113,7 @@ app.post('/api/exchanges', async (req, res) => {
                 }
 
                 // build dedupe hash from the full block
-                const hash_id = makeBlockHash(b.player, String(b.raw).replace(/\r\n/g, '\n'));
+                const hash_id = makeBlockHash(b.x, b.y, b.z, b.dimension, b.exchange_present);
 
                 console.log('Generated hash_id:', hash_id);
 
@@ -133,6 +131,7 @@ app.post('/api/exchanges', async (req, res) => {
                         exchange_possible: (b.exchange_possible ?? null),
                         compacted_input: b.compacted_input,
                         compacted_output: b.compacted_output,
+                        exchange_present: b.exchange_present,
                         raw: b.raw,
                         shop: shop_id,
                         hash_id
@@ -147,7 +146,7 @@ app.post('/api/exchanges', async (req, res) => {
                 console.log('Attempting to insert:', JSON.stringify(insertData, null, 2));
 
                 const { error } = await supabase
-                        .from('shop_events')
+                        .from('exchanges')
                         .upsert(insertData, { onConflict: 'hash_id' })
                         .select();
 
@@ -168,7 +167,7 @@ app.post('/api/exchanges', async (req, res) => {
 // GET /export.csv → export data
 app.get("/export.csv", async (_, res) => {
         const { data, error } = await supabase
-                .from("shop_events")
+                .from("exchanges")
                 .select("*")
                 .order("ts", { ascending: false });
 
@@ -184,7 +183,7 @@ app.get("/export.csv", async (_, res) => {
         ].join("\n");
 
         res.setHeader("Content-Type", "text/csv");
-        res.setHeader("Content-Disposition", "attachment; filename=shop_events.csv");
+        res.setHeader("Content-Disposition", "attachment; filename=exchanges.csv");
         res.send(csv);
 });
 
