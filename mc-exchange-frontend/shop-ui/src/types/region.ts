@@ -1,12 +1,12 @@
 export interface Region {
     id: string;
-    created_at: string; // ISO String
+    created_at: string; 
     name:string;
     slug:string;
     dimension:string;
     bounds: Bounds[];
     shops: string[];
-    owners: RegionOwners[];
+    owners: string[] | null;
 }
 
 export interface Bounds {
@@ -16,8 +16,4 @@ export interface Bounds {
     max_x: number;
     max_y: number;
     max_z: number;
-}
-export interface RegionOwners {
-    region_id: string;
-    owners: string[];
 }

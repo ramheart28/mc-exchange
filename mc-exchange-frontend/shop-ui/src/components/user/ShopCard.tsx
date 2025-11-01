@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import EventsList from "./EventList";
+import ExchangeCards from "./ExchangeCards";
 import { ShopWithEvents } from "@/types/shop";
 import { getBoundsCenter } from "@/app/utils/formatBounds";
 
@@ -34,7 +34,7 @@ export default function ShopCard({ shop }: { shop: ShopWithEvents }) {
       </div>
       <div>
         <h3 className="font-semibold mb-1">Inventory:</h3>
-        <EventsList events={shop.events} />
+        <ExchangeCards events={shop.events} />
       </div>
     </div>
   );
