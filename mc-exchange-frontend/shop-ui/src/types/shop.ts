@@ -21,6 +21,9 @@ export interface ShopEvent {
   compacted_input: string;
   compacted_output: string;
   shop: string;
+  x: number;
+  y: number;
+  z: number;
 }
 
 export type ShopWithEvents = Shop & { events: ShopEvent[] };

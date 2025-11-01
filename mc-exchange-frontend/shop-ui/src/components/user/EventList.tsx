@@ -145,6 +145,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
               <th className="px-3 py-2 border-b border-gray-700 text-center">Input</th>
               <th className="px-3 py-2 border-b border-gray-700 text-center"></th>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Output</th>
+              <th className="px-3 py-2 border-b border-gray-700 text-center">Location</th>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Exchanges</th>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Date</th>
             </tr>
@@ -152,7 +153,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
           <tbody>
             {filteredEvents.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-400 py-6">
+                <td colSpan={6} className="text-center text-gray-400 py-6">
                   No {activeTab.toLowerCase()} events.
                 </td>
               </tr>
@@ -181,12 +182,20 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
                       (event as any).output_enchantments
                     )}
                   </td>
+                  <td className="px-3 py-2 text-center align-middle">
+                    <div>
+                      {typeof event.shop === 'object' && event.shop !== null && 'name' in event.shop
+                        ? (event.shop as { name: string }).name
+                        : event.shop}
+                    </div>
+                    <div className="text-xs text-gray-400">({event.x}, {event.y}, {event.z})</div>
+                  </td>
                   <td className="px-3 py-2 text-center align-middle">{event.exchange_possible}</td>
                   <td className="px-3 py-2 text-center align-middle">
                     {new Date(event.ts).toLocaleDateString(undefined, {
                       month: "2-digit",
                       day: "2-digit",
-                    })}
+                    })}{" "}
                   </td>
                 </tr>
               ))
