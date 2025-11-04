@@ -147,7 +147,7 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                 }
 
                 const region_id = req.params.id;
-                let b = req.body || {};
+
                 let query = supabase
                         .from("regions")
                         .select("shops")
@@ -167,7 +167,8 @@ router.get("/regions/:id/shops", protectRoute, async (req, res) => {
                 const { data: shops_data, error: shop_error } = await supabase
                         .from("shops")
                         .select("*")
-                        .in('id', region_data.shops);
+                        .in('id', region_data.shops)
+                        .order("index", { ascending: true });
 
                 if (shop_error) {
                         console.error('Unable to find shop:', shop_error);

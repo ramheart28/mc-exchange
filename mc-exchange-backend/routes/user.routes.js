@@ -30,8 +30,9 @@ router.get("/regions/:slug/shops", async (req, res) => {
 
     const { data: shops_data, error: shop_error } = await supabase
       .from("shops")
-      .select("id, name, created_at, owner, region, bounds, image")
-      .in('id', region_data.shops);
+      .select("id, name, created_at, owner, region, bounds, image, index")
+      .in('id', region_data.shops)
+      .order("index", { ascending: true });
 
     if (shop_error) {
       console.error('Unable to find shop:', shop_error);
