@@ -1,20 +1,35 @@
 'use client';
 import { ShopEvent } from "@/types/shop";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-const TABS = ["Buy", "Sell", "Trade"] as const;
-type TabType = typeof TABS[number];
+
+const ALL_TABS = ["For Sale", "Buying", "Trade"] as const;
+type TabType = typeof ALL_TABS[number];
 
 function getEventType(event: ShopEvent): TabType {
-  if (event.input_item_id === "diamond") return "Buy";
-  if (event.output_item_id === "diamond") return "Sell";
+  const forSaleInputs = ["diamond", "iron_ingot", "iron_ingots"];
+  if (forSaleInputs.includes(event.input_item_id)) return "For Sale";
+  if (event.output_item_id === "diamond") return "Buying";
   return "Trade";
 }
 
-export default function EventsList({ events }: { events: ShopEvent[] }) {
+interface EventsListProps {
+  events: ShopEvent[];
+  showLocation?: boolean;
+}
+
+export default function EventsList({ events, showLocation = true }: EventsListProps) {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<TabType>("Buy");
+
+  // Only show tabs that have at least one event
+  const availableTabs = ALL_TABS.filter(tab => events.some(e => getEventType(e) === tab));
+  const [activeTab, setActiveTab] = useState<TabType>(availableTabs[0] || "For Sale");
+
+  // Reset activeTab to 'For Sale' (or first available) whenever availableTabs changes
+  useEffect(() => {
+    setActiveTab(availableTabs[0] || "For Sale");
+  }, [JSON.stringify(availableTabs)]);
 
   const formatItemId = (id: string) =>
     id
@@ -84,7 +99,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
       ];
 
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center ">
         {!hasFailed && (
           <div className="relative inline-block rounded">
             <Image
@@ -121,37 +136,46 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
   return (
     <div>
       {/* Tabs */}
-      <div className="mb-4 flex gap-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            className={`px-4 py-2 rounded-t ${
-              activeTab === tab
-                ? "bg-blue-700 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-gray-600"
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      {availableTabs.length > 0 && (
+        <div className="mb-4 flex gap-2">
+          {availableTabs.map((tab) => (
+            <button
+              key={tab}
+              className={`px-4 py-2 rounded-t ${
+                activeTab === tab
+                  ? "bg-pv-surface-elevated border rounded-lg border-pv-accent-border text-white"
+                  : "bg-pv-surface text-gray-300 hover:bg-gray-600"
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto border border-pv-border rounded-lg">
         <table className="min-w-full border-collapse">
-          <thead className="sticky top-0 z-10 bg-gray-900">
+          <thead className="sticky top-0 z-10 bg-pv-border">
             <tr>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Input</th>
               <th className="px-3 py-2 border-b border-gray-700 text-center"></th>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Output</th>
-              <th className="px-3 py-2 border-b border-gray-700 text-center">Location</th>
+              {showLocation && (
+                <th className="px-3 py-2 border-b border-gray-700 text-center">Location</th>
+              )}
               <th className="px-3 py-2 border-b border-gray-700 text-center">Exchanges</th>
               <th className="px-3 py-2 border-b border-gray-700 text-center">Date</th>
             </tr>
           </thead>
           <tbody>
-            {filteredEvents.length === 0 ? (
+          <tr>
+            <td colSpan={showLocation ? 6 : 5} className="p-0">
+              <div className="h-1 w-full bg-white-100" />
+            </td>
+          </tr>
+          {filteredEvents.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center text-gray-400 py-6">
                   No {activeTab.toLowerCase()} events.
@@ -162,7 +186,7 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
                 <tr
                   key={event.ts + event.input_item_id + event.output_item_id}
                   className={
-                    `${idx % 2 === 0 ? 'bg-gray-900' : 'bg-gray-800'} hover:bg-gray-700`
+                    `${idx % 2 === 0 ? 'bg-pv-surface-elevated' : 'bg-pv-border'} hover:bg-gray-700`
                   }
                 >
                   <td className="px-3 py-2 text-center align-middle">
@@ -182,14 +206,16 @@ export default function EventsList({ events }: { events: ShopEvent[] }) {
                       (event as any).output_enchantments
                     )}
                   </td>
-                  <td className="px-3 py-2 text-center align-middle">
-                    <div>
-                      {typeof event.shop === 'object' && event.shop !== null && 'name' in event.shop
-                        ? (event.shop as { name: string }).name
-                        : event.shop}
-                    </div>
-                    <div className="text-xs text-gray-400">({event.x}, {event.y}, {event.z})</div>
-                  </td>
+                  {showLocation && (
+                    <td className="px-3 py-2 text-center align-middle">
+                      <div>
+                        {typeof event.shop === 'object' && event.shop !== null && 'name' in event.shop
+                          ? (event.shop as { name: string }).name
+                          : event.shop}
+                      </div>
+                      <div className="text-xs text-gray-400">({event.x}, {event.y}, {event.z})</div>
+                    </td>
+                  )}
                   <td className="px-3 py-2 text-center align-middle">{event.exchange_possible}</td>
                   <td className="px-3 py-2 text-center align-middle">
                     {new Date(event.ts).toLocaleDateString(undefined, {

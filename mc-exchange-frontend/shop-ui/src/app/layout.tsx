@@ -18,7 +18,7 @@ export default function RootLayout({
         <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js" />
         <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.topology.min.js" />
       </head>
-      <body>{children}</body>
+      <body className="bg-black">{children}</body>
     </html>
   );
 }

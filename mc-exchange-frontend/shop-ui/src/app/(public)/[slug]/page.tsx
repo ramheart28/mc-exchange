@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Shop, ShopWithEvents } from "@/types/shop";
 import ShopCard from "@/components/user/ShopCard";
-import RegionTopBar from "@/components/user/RegionTopBar";
+import { RegionTopBar } from "@/components/user/RegionTopBar";
 import { useParams } from "next/navigation";
 
 export default function RegionPage() {

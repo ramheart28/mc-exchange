@@ -17,12 +17,6 @@ export async function supabaseServer(cookieStore: any) {
         async get(name: string) {
           return (await cookieStore).get(name)?.value;
         },
-        async set(name: string, value: string, options: any) {
-          (await cookieStore).set({ name, value, ...options });
-        },
-        async remove(name: string, options: any) {
-          (await cookieStore).set({ name, value: '', ...options });
-        },
       },
     }
   );

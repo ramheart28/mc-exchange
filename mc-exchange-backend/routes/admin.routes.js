@@ -12,7 +12,7 @@ router.get("/exchanges", protectRoute, adminProtectRoute, async (req, res) => {
 
   let query = supabase
     .from("exchanges")
-    .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, x, y, z, shop!inner(*), input_enchantments, output_enchantments");
+    .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, x, y, z, shop(*), input_enchantments, output_enchantments");
 
   if (shopId)
     query = query.eq('shop.id', shopId);

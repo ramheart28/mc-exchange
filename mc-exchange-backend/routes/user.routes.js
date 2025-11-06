@@ -76,37 +76,56 @@ router.get("/exchanges/shop", async (req, res) => {
 });
 
 router.get("/exchanges", async (req, res) => {
-  const shopId = req.query.shop;
+  try {
+    const shopId = req.query.shop;
+    let searchOutput = req.query.search_output;
+    const regionSlugOrId = req.query.region;
 
-  let searchOutput = req.query.search_output;
+    if (!regionSlugOrId)
+      return res.status(400).json({ error: "Missing region" });
 
-  const regionId = req.query.region;
+    // If region is not a UUID, look up the UUID from the slug
+    let regionId = regionSlugOrId;
+    if (!/^[0-9a-fA-F-]{36}$/.test(regionSlugOrId)) {
+      const { data: regionData, error: regionError } = await supabase
+        .from("regions")
+        .select("id")
+        .eq("slug", regionSlugOrId)
+        .single();
+      if (regionError || !regionData) {
+        return res.status(400).json({ error: "Invalid region slug" });
+      }
+      regionId = regionData.id;
+    }
 
-  if (!regionId)
-    return res.status(400).json({ error: "Missing region" });
+    if (!shopId && !searchOutput)
+      return res.status(400).json({ error: "Missing shop id and search output" });
 
+    let query = supabase
+      .from("exchanges")
+      .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop(*), input_enchantments, output_enchantments")
+      .eq('shop.region', regionId);
+    if (shopId)
+      query = query.eq('shop.id', shopId);
+    if (searchOutput) {
+      searchOutput = '%' + searchOutput + '%';
+      query = query.ilike('output_item_id', searchOutput);
+    }
 
-  if (!shopId && !searchOutput)
-    return res.status(400).json({ error: "Missing shop id and search output" });
+    const { data, error } = await query
+      .order("ts", { ascending: false })
+      .limit(200);
 
+    if (error) {
+      console.error('Database error in /user/exchanges:', error);
+      return res.status(500).send(error.message);
+    }
 
-  let query = supabase
-    .from("exchanges")
-    .select("ts, input_item_id, input_qty, output_item_id, output_qty, exchange_possible, compacted_input, compacted_output, shop!inner(*), input_enchantments, output_enchantments").eq('shop.region', regionId);
-  if (shopId)
-    query = query.eq('shop.id', shopId);
-  if (searchOutput) {
-    searchOutput = '%' + searchOutput + '%';
-    query = query.ilike('output_item_id', searchOutput);
+    return res.status(200).json({ ok: true, data: data || [] });
+  } catch (e) {
+    console.error('unexpected error in /user/exchanges:', e);
+    return res.status(500).json({ error: 'server_error' });
   }
-
-  const { data, error } = await query
-    .order("ts", { ascending: false })
-    .limit(200);
-
-  if (error) return res.status(500).send(error.message);
-
-  return res.status(200).json({ ok: true, data: data || [] });
 });
 
 

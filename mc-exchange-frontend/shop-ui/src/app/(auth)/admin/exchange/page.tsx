@@ -3,10 +3,13 @@ import React, { useEffect, useState } from "react";
 import { supabaseBrowser } from '@/lib/supabase';
 import { ShopEvent } from "@/types/shop";
 import EventsList from "../../../../components/user/EventList";
+import { SearchBar } from "@/components/SearchBar";
+import { useRouter } from "next/navigation"; 
 
 export default function ExchangesPage() {
   const [exchanges, setExchanges] = useState<ShopEvent[]>([]);
   const supabase = supabaseBrowser();
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchExchanges() {
@@ -23,6 +26,21 @@ export default function ExchangesPage() {
 
   return (
     <div className="max-w-5xl mx-auto mt-12">
+      <SearchBar<ShopEvent>
+        placeholder="Search exchanges..."
+        apiEndpoint="/api/admin/exchanges"
+        mapResults={event => event.output_item_id}
+        onResultClick={event => router.push(`/search?query=${encodeURIComponent(event.output_item_id)}`)}
+        onSubmit={query => router.push(`/search?query=${encodeURIComponent(query)}`)}
+        getAuthHeaders={async () => { 
+          const { data } = await supabase.auth.getSession();
+          const token = data?.session?.access_token;
+          const headers: Record<string, string> = {};
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          return headers;
+        }}
+      />
+
       <h2 className="text-lg font-semibold mb-4">All Exchanges</h2>
       <EventsList events={exchanges} />
     </div>
