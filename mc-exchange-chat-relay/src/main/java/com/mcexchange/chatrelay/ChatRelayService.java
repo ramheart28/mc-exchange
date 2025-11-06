@@ -11,7 +11,7 @@ import java.util.concurrent.CompletableFuture;
 public class ChatRelayService {
   private static final HttpClient client = HttpClient.newHttpClient();
   private static final String BACKEND_URL =
-      System.getProperty("mcexchange.backend.url", "http://localhost:5000");
+      System.getProperty("mcexchange.backend.url", "https://beacon-civmc.fly.dev");
   private static final Gson gson = new Gson();
 
   public static void sendExchangeData(ExchangeParser.ExchangeData exchange) {
