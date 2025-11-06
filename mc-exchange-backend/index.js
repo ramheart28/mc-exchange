@@ -187,5 +187,5 @@ app.get("/export.csv", async (_, res) => {
         res.send(csv);
 });
 
-app.listen(process.env.PORT || 5000, () => console.log("Backend running on port", process.env.PORT || 5000));
+app.listen(process.env.PORT || 8080, () => console.log("Backend running on port", process.env.PORT || 8080));
 export default app;
