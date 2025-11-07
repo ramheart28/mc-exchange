@@ -3,145 +3,77 @@ import axios from 'axios';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
-//GET handler for fetching shops in a region
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const authorization = request.headers.get('authorization');
-    if (!authorization) {
-      return NextResponse.json(
-        { error: 'Authorization required' },
-        { status: 401 }
-      );
-    }
+type IdParams = Promise<{ id: string }>;
 
-    const response = await axios.get(`${BACKEND_URL}/owner/regions/${id}/shops`, {
-      headers: {
-        'Authorization': authorization,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
-    );
+function requireAuth(req: NextRequest) {
+  const authorization = req.headers.get('authorization');
+  if (!authorization) {
+    return { error: NextResponse.json({ error: 'Authorization required' }, { status: 401 }) };
   }
+  return { authorization };
 }
 
-// PATCH handler for editing a shop in a region
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const authorization = request.headers.get('authorization');
-    if (!authorization) {
-      return NextResponse.json(
-        { error: 'Authorization required' },
-        { status: 401 }
-      );
-    }
+// GET /api/regions/[id]/shops
+export async function GET(request: NextRequest, context: { params: IdParams }) {
+  const { authorization, error } = requireAuth(request);
+  if (error) return error;
 
-    const body = await request.json();
+  const { id } = await context.params;
 
-    // Forward PATCH to backend
-    const response = await axios.patch(
-      `${BACKEND_URL}/owner/regions/${id}/shops`,
-      body,
-      {
-        headers: {
-          'Authorization': authorization,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  const response = await axios.get(`${BACKEND_URL}/owner/regions/${id}/shops`, {
+    headers: { Authorization: authorization!, 'Content-Type': 'application/json' },
+    validateStatus: () => true,
+  });
 
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
-    );
-  }
+  return NextResponse.json(response.data ?? null, { status: response.status });
 }
 
-//POST for creating a new shop
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const authorization = request.headers.get('authorization');
-    if (!authorization) {
-      return NextResponse.json(
-        { error: 'Authorization required' },
-        { status: 401 }
-      );
-    }
+// PATCH /api/regions/[id]/shops
+export async function PATCH(request: NextRequest, context: { params: IdParams }) {
+  const { authorization, error } = requireAuth(request);
+  if (error) return error;
 
-    const body = await request.json();
+  const { id } = await context.params;
+  const body = await request.json();
 
-    // Forward POST to backend
-    const response = await axios.post(
-      `${BACKEND_URL}/owner/regions/${id}/shops`,
-      body,
-      {
-        headers: {
-          'Authorization': authorization,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  const response = await axios.patch(`${BACKEND_URL}/owner/regions/${id}/shops`, body, {
+    headers: { Authorization: authorization!, 'Content-Type': 'application/json' },
+    validateStatus: () => true,
+  });
 
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
-    );
-  }
+  return NextResponse.json(response.data ?? null, { status: response.status });
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const authorization = request.headers.get('authorization');
-    if (!authorization) {
-      return NextResponse.json(
-        { error: 'Authorization required' },
-        { status: 401 }
-      );
-    }
+// POST /api/regions/[id]/shops
+export async function POST(request: NextRequest, context: { params: IdParams }) {
+  const { authorization, error } = requireAuth(request);
+  if (error) return error;
 
-    const body = await request.json();
+  const { id } = await context.params;
+  const body = await request.json();
 
-    const response = await axios.delete(
-      `${BACKEND_URL}/owner/regions/${id}/shops`,
-      {
-        headers: {
-          'Authorization': authorization,
-          'Content-Type': 'application/json'
-        },
-        data: body 
-      }
-    );
+  const response = await axios.post(`${BACKEND_URL}/owner/regions/${id}/shops`, body, {
+    headers: { Authorization: authorization!, 'Content-Type': 'application/json' },
+    validateStatus: () => true,
+  });
 
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
-    );
-  }
+  return NextResponse.json(response.data ?? null, { status: response.status });
+}
+
+// DELETE /api/regions/[id]/shops
+export async function DELETE(request: NextRequest, context: { params: IdParams }) {
+  const { authorization, error } = requireAuth(request);
+  if (error) return error;
+
+  const { id } = await context.params;
+  // if your backend expects a body for DELETE:
+  const body = await request.json().catch(() => undefined);
+
+  const response = await axios.delete(`${BACKEND_URL}/owner/regions/${id}/shops`, {
+    headers: { Authorization: authorization!, 'Content-Type': 'application/json' },
+    data: body,
+    validateStatus: () => true,
+  });
+
+  return NextResponse.json(response.data ?? null, { status: response.status });
 }

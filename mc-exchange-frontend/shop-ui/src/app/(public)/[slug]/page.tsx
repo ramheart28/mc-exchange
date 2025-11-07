@@ -4,11 +4,12 @@ import { Shop, ShopWithEvents } from "@/types/shop";
 import ShopCard from "@/components/user/ShopCard";
 import { RegionTopBar } from "@/components/user/RegionTopBar";
 import { useParams } from "next/navigation";
+import { Bounds } from "@/types/region";
 
 export default function RegionPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const [region, setRegion] = useState<{ id: string; name: string; bounds: string[] } | null>(null);
+  const [region, setRegion] = useState<{ id: string; name: string; bounds: Bounds[] } | null>(null);
   const [shops, setShops] = useState<ShopWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +45,14 @@ export default function RegionPage() {
 
   return (
     <div className="min-h-screen">
-      {region && <RegionTopBar region={region} />}
+      {region && (
+        <RegionTopBar
+          region={{
+            name: region.name,
+            bounds: region.bounds 
+          }}
+        />
+      )}
         {loading ? (
           <div className="flex justify-center items-center h-40">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>

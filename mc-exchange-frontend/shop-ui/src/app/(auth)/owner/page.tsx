@@ -1,15 +1,16 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import OwnerTopBar from '@/components/Owner/OwnerTopBar';
 import { Shop } from '@/types/shop';
+import { Region } from '@/types/region'; 
 import ShopCard from '@/components/Owner/OwnerShopCards';
 import { supabaseBrowser } from '@/lib/supabase';
 import ShopEditAddModal from '@/components/Owner/ShopEditAddModal';
 
 export default function OwnerHomePage() {
   const [shops, setShops] = useState<Shop[]>([]);
-  const [regions, setRegions] = useState<any[]>([]);
-  const [selectedRegion, setSelectedRegion] = useState<any | null>(null);
+  const [regions, setRegions] = useState<Region[]>([]); 
+  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +18,8 @@ export default function OwnerHomePage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingShop, setEditingShop] = useState<Shop | null>(null);
 
-  const supabase = supabaseBrowser();
+  // Memoize supabase so supabase.auth is stable
+  const supabase = useMemo(() => supabaseBrowser(), []);
 
   // Fetch regions on mount
   useEffect(() => {
@@ -53,10 +55,10 @@ export default function OwnerHomePage() {
       }
     };
     fetchRegions();
-  }, []);
+  }, [supabase]);
 
   // Fetch shops for the selected region
-  const refreshShops = async () => {
+  const refreshShops = useCallback(async () => {
     if (!selectedRegion) return;
     setLoading(true);
     setError(null);
@@ -86,13 +88,12 @@ export default function OwnerHomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedRegion, supabase]);
 
   // Fetch shops when selectedRegion changes
   useEffect(() => {
     refreshShops();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedRegion, supabase.auth]);
+  }, [selectedRegion, supabase, refreshShops]); 
 
   // Modal handlers
   const handleAddShop = () => {
@@ -172,8 +173,6 @@ export default function OwnerHomePage() {
   // Prepare region info for OwnerTopBar
   const regionName = selectedRegion?.name || '';
   const shopCount = shops.length;
-  const owners = selectedRegion?.owners || [];
-  const regionImg = selectedRegion?.image || "";
 
   return (
     <div className="p-3">
@@ -182,9 +181,9 @@ export default function OwnerHomePage() {
         <OwnerTopBar
           name={regionName}
           shopCount={shopCount}
-          lastUpdated={selectedRegion?.lastUpdated || ""}
-          bounds={selectedRegion?.bounds || []}
-          owners={owners}
+          bounds={selectedRegion?.bounds?.[0] ?? {
+    min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0
+  }}
           onAddShop={handleAddShop}
           regions={regions}
           selectedRegionId={selectedRegion?.id || ""}
@@ -229,8 +228,7 @@ export default function OwnerHomePage() {
           setEditingShop(null);
         }}
         onSubmit={handleShopSubmit}
-        regionId={selectedRegion?.id || ""}
-        owner={selectedRegion?.owner || ""}
+        owner={selectedRegion?.owners?.[0] || ""}
         initialShop={editingShop}
         regionBounds={selectedRegion?.bounds || []}
       />

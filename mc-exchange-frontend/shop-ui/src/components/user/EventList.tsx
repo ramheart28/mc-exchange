@@ -3,7 +3,6 @@ import { ShopEvent } from "@/types/shop";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
 
-
 const ALL_TABS = ["For Sale", "Buying", "Trade"] as const;
 type TabType = typeof ALL_TABS[number];
 
@@ -23,13 +22,16 @@ export default function EventsList({ events, showLocation = true }: EventsListPr
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
 
   // Only show tabs that have at least one event
-  const availableTabs = ALL_TABS.filter(tab => events.some(e => getEventType(e) === tab));
+  const availableTabs = React.useMemo(
+    () => ALL_TABS.filter(tab => events.some(e => getEventType(e) === tab)),
+    [events]
+  );
   const [activeTab, setActiveTab] = useState<TabType>(availableTabs[0] || "For Sale");
 
   // Reset activeTab to 'For Sale' (or first available) whenever availableTabs changes
   useEffect(() => {
     setActiveTab(availableTabs[0] || "For Sale");
-  }, [JSON.stringify(availableTabs)]);
+  }, [availableTabs]);
 
   const formatItemId = (id: string) =>
     id
@@ -193,8 +195,12 @@ export default function EventsList({ events, showLocation = true }: EventsListPr
                     {renderItemCell(
                       event.input_item_id,
                       event.input_qty,
-                      (event as any).compacted_input,
-                      (event as any).input_enchantments
+                      !!event.compacted_input && event.compacted_input !== "false",
+                      Array.isArray(event.input_enchantments)
+                        ? event.input_enchantments
+                        : typeof event.input_enchantments === "string"
+                        ? [event.input_enchantments]
+                        : undefined
                     )}
                   </td>
                   <td className="px-3 py-2 text-center align-middle text-white/70 text-lg">→</td>
@@ -202,8 +208,12 @@ export default function EventsList({ events, showLocation = true }: EventsListPr
                     {renderItemCell(
                       event.output_item_id,
                       event.output_qty,
-                      (event as any).compacted_output,
-                      (event as any).output_enchantments
+                      !!event.compacted_output && event.compacted_output !== "false",
+                      Array.isArray(event.output_enchantments)
+                        ? event.output_enchantments
+                        : typeof event.output_enchantments === "string"
+                        ? [event.output_enchantments]
+                        : undefined
                     )}
                   </td>
                   {showLocation && (

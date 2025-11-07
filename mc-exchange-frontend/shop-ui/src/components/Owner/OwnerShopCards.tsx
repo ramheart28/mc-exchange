@@ -1,9 +1,10 @@
-// components/Owner/ShopCard.tsx
 import { useState } from 'react';
 import EditAddShopButton from './EditAddShopButton';
 import { Shop } from '@/types/shop';
 import { formatBounds } from '@/app/utils/formatBounds';
 import { supabaseBrowser } from '@/lib/supabase';
+import Image from "next/image";
+import { Bounds } from '@/types/region';
 
 interface ShopCardProps {
   shop: Shop;
@@ -30,8 +31,8 @@ export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardP
   const displayImage = imageError ? fallbackImage : (shop.image || fallbackImage);
 
   // Format all bounds regions
-  const allBounds = Array.isArray(shop.bounds) ? shop.bounds : [];
-  const formattedBounds = allBounds.map((b: any) => formatBounds([b]));
+  const allBounds = Array.isArray(shop.bounds) ? shop.bounds as (string | Bounds)[] : [];
+  const formattedBounds = allBounds.map((b) => formatBounds([b]));
 
   // Delete handler
   const handleDelete = async () => {
@@ -63,7 +64,7 @@ export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardP
       } else {
         onDelete?.(shop.name);
       }
-    } catch (e) {
+    } catch {
       alert("Failed to delete shop");
     } finally {
       setDeleting(false);
@@ -75,9 +76,11 @@ export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardP
       {/* Shop Image */}
       <div className="flex justify-center mb-4">
         <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-          <img
+          <Image
             src={displayImage}
             alt={`${shop.name} icon`}
+            width={64}
+            height={64}
             className="w-full h-full object-contain"
             onError={() => setImageError(true)}
           />
@@ -140,7 +143,8 @@ export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardP
 
         <button
           onClick={handleDelete}
-          className="
+          disabled={deleting}
+          className={`
             bg-red-600 
             hover:bg-red-700 
             text-white 
@@ -151,9 +155,10 @@ export default function ShopCard({ shop, onEdit, onDelete, regionId }: ShopCardP
             duration-200
             hover:shadow-lg
             active:scale-95
-          "
+            ${deleting ? "opacity-50 cursor-not-allowed" : ""}
+          `}
         >
-          Delete
+          {deleting ? "Deleting..." : "Delete"}
         </button>
       </div>
     </div>

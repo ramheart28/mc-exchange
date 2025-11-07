@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Region } from "@/types/region"; // Adjust the import path if needed
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001"; // adjust as needed
 
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!res.ok) {
     return NextResponse.json({ error: "Failed to fetch regions" }, { status: res.status });
   }
-  const data = await res.json();
+  const data: { regions: Region[] } = await res.json();
   return NextResponse.json(data);
 }
 
@@ -32,11 +33,17 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    const data: Region = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+        ? error
+        : "Internal server error";
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

@@ -1,9 +1,19 @@
 'use client'
 import { useEffect, useRef } from 'react'
 
+type VantaEffect = {
+  destroy: () => void;
+};
+
+type VantaWindow = typeof window & {
+  VANTA?: {
+    TOPOLOGY?: (options: Record<string, unknown>) => VantaEffect;
+  };
+};
+
 export default function VantaBackground() {
-  const vantaRef = useRef<HTMLDivElement>(null)
-  const effectRef = useRef<any>(null)
+  const vantaRef = useRef<HTMLDivElement>(null);
+  const effectRef = useRef<VantaEffect | null>(null);
 
   useEffect(() => {
     let animationFrame: number;
@@ -11,11 +21,11 @@ export default function VantaBackground() {
     function ensureVanta() {
       if (
         typeof window !== 'undefined' &&
-        (window as any).VANTA?.TOPOLOGY &&
+        (window as VantaWindow).VANTA?.TOPOLOGY &&
         vantaRef.current &&
         !effectRef.current
       ) {
-        effectRef.current = (window as any).VANTA.TOPOLOGY({
+        effectRef.current = (window as VantaWindow).VANTA!.TOPOLOGY!({
           el: vantaRef.current,
           mouseControls: true,
           touchControls: true,

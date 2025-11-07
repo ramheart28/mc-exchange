@@ -22,11 +22,18 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    let message = 'Internal server error';
+    let status = 500;
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.details || error.message || message;
+      status = error.response?.status || status;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
     return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
+      { error: message },
+      { status }
     );
   }
 }
-

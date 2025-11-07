@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   const res = await fetch(url, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: token } : {}),
     },
   });
 
@@ -26,6 +27,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch shop exchanges" }, { status: res.status });
   }
 
-  const data = await res.json();
+  const data: unknown = await res.json();
   return NextResponse.json(data);
 }

@@ -24,9 +24,15 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (e: any) {
+  }catch (e: unknown) {
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+        ? e
+        : "Internal server error";
     return NextResponse.json(
-      { error: e.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

@@ -50,7 +50,7 @@ export default function AdminPage() {
       setLoading(false);
     }
     fetchData();
-  }, []);
+  }, [supabase.auth]);
 
   // Create region handler
   async function handleCreateRegion(e: React.FormEvent) {

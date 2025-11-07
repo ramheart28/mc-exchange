@@ -1,15 +1,17 @@
 import { formatBounds } from '@/app/utils/formatBounds';
+import React from 'react';
+import { Bounds } from '@/types/region';
 
 interface RegionCardProps {
   shopCount: string | number;
-  bounds: any[];
+  bounds: Bounds;
 }
 
 export default function RegionCard({
   shopCount,
   bounds,
 }: RegionCardProps) {
-  const boundsData = formatBounds(bounds);
+  const boundsData = formatBounds([bounds]);
 
   return (
     <div className="flex flex-row gap-6 justify-start m-1">

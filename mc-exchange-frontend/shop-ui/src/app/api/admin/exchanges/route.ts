@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let data;
   try {
     data = JSON.parse(text);
-  } catch (e) {
+  } catch  {
     return NextResponse.json({ error: "Invalid JSON from backend", details: text }, { status: 500 });
   }
 

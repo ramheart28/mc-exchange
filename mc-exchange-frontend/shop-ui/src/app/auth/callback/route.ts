@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   console.log('Auth callback called with:', { code: !!code, origin, next });
 
   if (code) {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = await supabaseServer(cookieStore);
     
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);

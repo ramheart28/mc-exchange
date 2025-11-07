@@ -8,10 +8,10 @@ import Link from 'next/link';
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   // Await cookies() first
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const supabase = await supabaseServer(cookieStore);
   
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     redirect('/login');

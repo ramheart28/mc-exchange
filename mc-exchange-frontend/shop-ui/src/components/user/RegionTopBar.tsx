@@ -1,14 +1,13 @@
-
-
 import Link from 'next/link';
 import { getBoundsCenter } from '@/app/utils/formatBounds';
 import { useRouter, useParams } from 'next/navigation';
 import { SearchBar } from '../SearchBar';
+import { Region } from '@/types/region';
 
 interface RegionTopBarProps {
   region?: {
     name?: string;
-    bounds?: any;
+    bounds?: Region["bounds"];
   };
 }
 
@@ -33,11 +32,6 @@ export function RegionTopBar({ region }: RegionTopBarProps) {
           <SearchBar
             placeholder={`Search ${region?.name || 'this region'}'s shops...`}
             apiEndpoint={`/api/user/exchanges?region=${slug}`}
-            mapResults={event =>
-              typeof event.compacted_output === 'string' && event.compacted_output
-                ? event.compacted_output
-                : (typeof event.output_item_id === 'string' ? event.output_item_id : '')
-            }
             onResultClick={event => router.push(`/search?query=${encodeURIComponent(event.output_item_id ?? '')}&region=${slug}`)}
             onSubmit={query => router.push(`/search?query=${encodeURIComponent(query)}&region=${slug}`)}
           />
@@ -54,5 +48,3 @@ export function RegionTopBar({ region }: RegionTopBarProps) {
     </div>
   );
 }
-
-// Shop Count

@@ -2,15 +2,15 @@ import React, { useState } from "react";
 import EditAddShopButton from "./EditAddShopButton";
 import RegionCard from "./RegionCard";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { Bounds } from "@/types/region";
+import {Region} from "@/types/region";
 
 interface OwnerTopBarProps {
   name: string;
   shopCount: number;
-  lastUpdated: string;
-  bounds: any;
-  owners: string[];
+  bounds: Bounds;
   onAddShop: () => void;
-  regions: any[];
+  regions: Region[];
   selectedRegionId: string;
   onRegionChange: (regionId: string) => void;
 }
@@ -18,9 +18,7 @@ interface OwnerTopBarProps {
 export default function OwnerTopBar({
   name,
   shopCount,
-  lastUpdated,
   bounds,
-  owners,
   onAddShop,
   regions,
   selectedRegionId,

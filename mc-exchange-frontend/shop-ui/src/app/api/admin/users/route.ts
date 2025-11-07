@@ -22,37 +22,18 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
-
-// PATCH /api/admin/users/:id
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const authorization = request.headers.get('authorization');
-    if (!authorization) {
-      return NextResponse.json(
-        { error: 'Authorization required' },
-        { status: 401 }
-      );
+  } catch (error: unknown) {
+    let message = 'Internal server error';
+    let status = 500;
+    if (axios.isAxiosError(error)) {
+      message = error.response?.data?.details || error.message || message;
+      status = error.response?.status || status;
+    } else if (error instanceof Error) {
+      message = error.message;
     }
-    const { id } = params;
-    const body = await request.json();
-    const response = await axios.patch(`${BACKEND_URL}/admin/users/${id}`, body, {
-      headers: {
-        'Authorization': authorization,
-        'Content-Type': 'application/json'
-      }
-    });
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
     return NextResponse.json(
-      { error: error.response?.data?.details || error.message || 'Internal server error' },
-      { status: error.response?.status || 500 }
+      { error: message },
+      { status }
     );
   }
 }

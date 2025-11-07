@@ -6,6 +6,7 @@ import EventsList from "../../../../components/user/EventList";
 import { SearchBar } from "@/components/SearchBar";
 import { useRouter } from "next/navigation"; 
 
+
 export default function ExchangesPage() {
   const [exchanges, setExchanges] = useState<ShopEvent[]>([]);
   const supabase = supabaseBrowser();
@@ -22,14 +23,13 @@ export default function ExchangesPage() {
       setExchanges(json.data || []);
     }
     fetchExchanges();
-  }, []);
+  }, [supabase.auth]);
 
   return (
     <div className="max-w-5xl mx-auto mt-12">
       <SearchBar<ShopEvent>
         placeholder="Search exchanges..."
         apiEndpoint="/api/admin/exchanges"
-        mapResults={event => event.output_item_id}
         onResultClick={event => router.push(`/search?query=${encodeURIComponent(event.output_item_id)}`)}
         onSubmit={query => router.push(`/search?query=${encodeURIComponent(query)}`)}
         getAuthHeaders={async () => { 

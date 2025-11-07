@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import EventList from "@/components/user/EventList";
 import { ShopWithEvents } from "@/types/shop";
 import { getBoundsCenter } from "@/app/utils/formatBounds";
+import Image from "next/image";
 
-const FALLBACK_IMG = "/shop-icon.png"; 
+const FALLBACK_IMG = "/shop-icon.png";
 
 export default function ShopCard({ shop }: { shop: ShopWithEvents }) {
   const [imgError, setImgError] = useState(false);
@@ -14,11 +15,14 @@ export default function ShopCard({ shop }: { shop: ShopWithEvents }) {
       <div className="flex items-center mb-2">
         {/* Shop Image */}
         <div className="w-30 h-30 bg-white rounded-lg border border-pv-border flex items-center justify-center overflow-hidden mr-4">
-          <img
+          <Image
             src={displayImage}
             alt={`${shop.name} icon`}
             className="w-full h-full object-cover rounded-lg"
+            width={120}
+            height={120}
             onError={() => setImgError(true)}
+            unoptimized
           />
         </div>
         {/* Shop Info */}
@@ -34,7 +38,7 @@ export default function ShopCard({ shop }: { shop: ShopWithEvents }) {
       </div>
       <div>
         <h3 className="font-semibold mb-1">Inventory:</h3>
-  <EventList events={shop.events} showLocation={false} />
+        <EventList events={shop.events} showLocation={false} />
       </div>
     </div>
   );

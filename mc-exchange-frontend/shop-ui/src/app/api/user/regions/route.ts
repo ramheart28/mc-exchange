@@ -1,7 +1,6 @@
-// filepath: src/app/api/user/regions/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,9 +27,15 @@ export async function GET(req: NextRequest) {
 
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message =
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+        ? e
+        : "Internal server error";
     return NextResponse.json(
-      { error: e.message || 'Internal server error' },
+      { error: message },
       { status: 500 }
     );
   }

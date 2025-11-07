@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { Shop } from "@/types/shop";
+import { Region } from "@/types/region";
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import Image from "next/image";
 
 // Helper: parse a single bound (string or object) to object with numbers
-function parseBounds(bound: any) {
+type BoundLike =
+  | string
+  | {
+      min_x: number;
+      min_y: number;
+      min_z: number;
+      max_x: number;
+      max_y: number;
+      max_z: number;
+    };
+
+function parseBounds(bound: BoundLike) {
   if (typeof bound === 'string') {
     const coords = bound.slice(1, -1).split(',').map(Number);
     return {
@@ -27,7 +40,7 @@ function parseBounds(bound: any) {
 }
 
 // Helper: check if shop bounds are within region bounds
-function isBoundsInsideRegion(shopBounds: any, regionBounds: any) {
+function isBoundsInsideRegion(shopBounds: BoundLike, regionBounds: BoundLike) {
   const shop = parseBounds(shopBounds);
   const region = parseBounds(regionBounds);
   return (
@@ -44,10 +57,9 @@ interface ShopEditAddModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (shop: Partial<Shop>) => void;
-  regionId: string;
   owner: string;
   initialShop?: Shop | null;
-  regionBounds: any[];
+  regionBounds: Region["bounds"];
 }
 
 type BoundsObj = {
@@ -72,7 +84,6 @@ export default function ShopEditAddModal({
   open,
   onClose,
   onSubmit,
-  regionId,
   owner: initialOwner,
   initialShop,
   regionBounds,
@@ -96,6 +107,7 @@ export default function ShopEditAddModal({
   const [image, setImage] = useState(initialShop?.image || "");
   const [owner, setOwner] = useState(initialShop?.owner || initialOwner || "");
   const [error, setError] = useState<string | null>(null);
+  const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
     if (initialShop) {
@@ -168,7 +180,7 @@ export default function ShopEditAddModal({
     });
 
     // Validate bounds inside region
-    if (regionBounds.length > 0) {
+    if (regionBounds && regionBounds.length > 0) {
       const region = parseBounds(regionBounds[0]);
       for (const b of boundsArr) {
         if (!isBoundsInsideRegion(b, region)) {
@@ -234,18 +246,24 @@ export default function ShopEditAddModal({
             <input
               type="url"
               value={image}
-              onChange={e => setImage(e.target.value)}
+              onChange={e => {
+                setImage(e.target.value);
+                setImageError(false);
+              }}
               className="w-full border rounded px-2 py-1"
               placeholder="https://example.com/image.png"
               pattern="https?://.+"
             />
-            {image && (
+            {image && !imageError && (
               <div className="mt-2 flex justify-center">
-                <img
+                <Image
                   src={image}
                   alt="Shop preview"
+                  width={80}
+                  height={80}
                   className="w-20 h-20 object-cover rounded border border-pv-border"
-                  onError={e => (e.currentTarget.style.display = 'none')}
+                  onError={() => setImageError(true)}
+                  unoptimized
                 />
               </div>
             )}
