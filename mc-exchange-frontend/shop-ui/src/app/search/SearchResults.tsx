@@ -9,6 +9,10 @@ export default function SearchResultsContent() {
   const [results, setResults] = useState<ShopEvent[]>([]);
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
+<<<<<<< Updated upstream
+=======
+  const region = searchParams.get("region") || "";
+>>>>>>> Stashed changes
   const supabase = useMemo(() => supabaseBrowser(), []);
 
   useEffect(() => {
@@ -17,9 +21,23 @@ export default function SearchResultsContent() {
       const token = data?.session?.access_token;
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
+<<<<<<< Updated upstream
       const res = await fetch(`/api/admin/exchanges?search_output=${encodeURIComponent(query)}`, { headers });
       const json = await res.json();
       setResults(json.data || []);
+=======
+
+      if (region !== "") {
+        const res = await fetch(`/api/user/exchanges?search_output=${encodeURIComponent(query)}&region=${region}`, { headers });
+        const json = await res.json();
+        setResults(json.data || []);
+      }
+      else {
+        const res = await fetch(`/api/admin/exchanges?search_output=${encodeURIComponent(query)}`, { headers });
+        const json = await res.json();
+        setResults(json.data || []);
+      }
+>>>>>>> Stashed changes
     }
     if (query) fetchResults();
   }, [query, supabase]);
@@ -32,4 +50,8 @@ export default function SearchResultsContent() {
       <EventsList events={results} />
     </div>
   );
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes

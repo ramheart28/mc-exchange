@@ -47,4 +47,8 @@ export function RegionTopBar({ region }: RegionTopBarProps) {
       </div>
     </div>
   );
+<<<<<<< Updated upstream
 }
+=======
+}
+>>>>>>> Stashed changes
